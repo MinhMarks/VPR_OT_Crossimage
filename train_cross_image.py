@@ -85,8 +85,8 @@ def main(args):
         + "_({epoch:02d})_R1[{" + val_set_name + "/R1:.4f}]_R5[{" + val_set_name + "/R5:.4f}]",
         auto_insert_metric_name=False,
         save_weights_only=True,
-        save_top_k=3,
-        save_last=True,
+        save_top_k=1,      # Chỉ lưu 1 best checkpoint (giảm từ 3)
+        save_last=False,   # Không lưu last checkpoint
         mode="max",
     )
 
