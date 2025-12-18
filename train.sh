@@ -11,9 +11,8 @@ python train_cross_image.py \
     --img_per_place 4 \
     --epochs 15 \
     --lr 6e-5 \
-    --save_last \ 
     --num_trainable_blocks 4 \
-    --image_size 126 \
+    --image_size 224 \
     --val_sets msls_val \
     --log_dir ./logs/cross_image_frozen/
 
