@@ -53,18 +53,19 @@ def main(args):
         },
         lr=args.lr,
         optimizer="adamw",
-        weight_decay=args.weight_decay,
+        weight_decay=9.5e-9,
         momentum=0.9,
         lr_sched="linear",
         lr_sched_args={
             "start_factor": 1,
             "end_factor": 0.2,
-            "total_iters": args.total_iters,
+            "total_iters": 4000,
         },
-        loss_name=args.loss,
-        miner_name=args.miner,
-        miner_margin=args.miner_margin,
-        faiss_gpu=args.faiss_gpu,
+        loss_name='MultiSimilarityLoss',
+        miner_name='MultiSimilarityMiner', # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
+        miner_margin=0.1, 
+        # distance='euclidean',
+        faiss_gpu=False, 
     )
 
     # Load pretrained weights
@@ -86,7 +87,7 @@ def main(args):
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=1,      # Chỉ lưu 1 best checkpoint (giảm từ 3)
-        save_last=False,   # Không lưu last checkpoint
+        save_last=True,   # Không lưu last checkpoint
         mode="max",
     )
 
@@ -116,10 +117,10 @@ def main(args):
         num_sanity_val_steps=1,
         precision="16-mixed",
         max_epochs=args.epochs,
-        check_val_every_n_epoch=1,
-        callbacks=callbacks,
         logger=logger,
-        reload_dataloaders_every_n_epochs=1,
+        check_val_every_n_epoch=1, # run validation every epoch
+        callbacks=[checkpoint_cb],# we only run the checkpointing callback (you can add more)
+        reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
     )
 
