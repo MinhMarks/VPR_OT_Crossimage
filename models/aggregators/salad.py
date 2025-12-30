@@ -52,11 +52,11 @@ class SALAD(nn.Module):
             dropout=dropout,
         )
 
-        # Cross-image encoder (trained from scratch or separately)
+        # Cross-image encoder (now working on global token)
         self.cross_encoder = CrossImageEncoder(
-            cluster_dim=cluster_dim,
-            num_clusters=num_clusters,
+            input_dim=token_dim,
             img_per_place=img_per_place,
+            dropout=dropout,
         )
 
     def load_base_weights(self, checkpoint_path, strict=True):
@@ -135,7 +135,8 @@ class SALAD(nn.Module):
         s, t = self.base.compute_features(x)
 
         if use_cross_image and self.training and s.shape[0] % self.img_per_place == 0:
-            s = self.cross_encoder(s)
+            # Apply to global token t
+            t = self.cross_encoder(t)
 
         return self.base.build_descriptor(s, t)
 
@@ -171,7 +172,8 @@ class SALAD(nn.Module):
         
         # Apply cross-image
         # Each group of img_per_place will be the same image duplicated
-        s = self.cross_encoder(s)
+        # Apply to global token t instead of s
+        t = self.cross_encoder(t)
         
         # Build descriptor for all duplicates
         descriptors = self.base.build_descriptor(s, t)  # [B*img_per_place, descriptor_dim]
@@ -192,6 +194,6 @@ class SALAD(nn.Module):
         s, t = self.base.compute_features(x)
 
         if s.shape[0] % self.img_per_place == 0:
-            s = self.cross_encoder(s)
+            t = self.cross_encoder(t)
 
         return self.base.build_descriptor(s, t)

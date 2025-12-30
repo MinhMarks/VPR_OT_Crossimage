@@ -7,50 +7,56 @@ class CrossImageEncoder(nn.Module):
     Cross-image Transformer encoder for learning relationships between
     multiple images from the same place.
     
-    This module enhances cluster features by allowing images from the same
+    This module enhances features by allowing images from the same
     place to share information through self-attention.
     """
 
-    def __init__(self, cluster_dim=128, num_clusters=64, img_per_place=4, num_layers=2):
+    def __init__(self, input_dim=256, img_per_place=4, num_layers=2, dropout=0.1):
         super().__init__()
 
-        self.cluster_dim = cluster_dim
-        self.num_clusters = num_clusters
+        self.input_dim = input_dim
         self.img_per_place = img_per_place
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=cluster_dim * num_clusters,
+            d_model=input_dim,
             nhead=8,
-            dim_feedforward=1024,
+            dim_feedforward=input_dim * 4,
             activation="gelu",
-            dropout=0.1,
+            dropout=dropout,
             batch_first=False,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-    def forward(self, s):
+    def forward(self, x):
         """
         Apply cross-image attention enhancement.
         
         Args:
-            s: [B, cluster_dim, num_clusters] where B = num_places * img_per_place
+            x: [B, input_dim] where B = num_places * img_per_place
         Returns:
-            s_enhanced: [B, cluster_dim, num_clusters] with residual connection
+            x_enhanced: [B, input_dim] with residual connection
         """
-        B, cluster_dim, num_clusters = s.shape
+        B, D = x.shape
         num_places = B // self.img_per_place
-
-        # Group by place
-        s_place = s.view(num_places, self.img_per_place, cluster_dim, num_clusters)
-        s_seq = s_place.flatten(2)  # [num_places, img_per_place, embed_dim]
-        s_seq = s_seq.permute(1, 0, 2)  # [img_per_place, num_places, embed_dim]
+        
+        # Reshape for Transformer: [Sequence Length, Batch Size, Embedding Dim]
+        # In our case: Sequence Length = img_per_place
+        # Batch Size = num_places
+        
+        # [B, D] -> [num_places, img_per_place, D]
+        x_place = x.view(num_places, self.img_per_place, D)
+        
+        # Permute to [img_per_place, num_places, D] for Transformer (batch_first=False)
+        x_seq = x_place.permute(1, 0, 2)
 
         # Cross-image attention
-        s_encoded = self.encoder(s_seq)
+        x_encoded = self.encoder(x_seq)
 
-        # Reshape back
-        s_encoded = s_encoded.permute(1, 0, 2)
-        s_encoded = s_encoded.contiguous().view(B, cluster_dim, num_clusters)
-        s_encoded = nn.functional.normalize(s_encoded, p=2, dim=1)
+        # Reshape back to [B, D]
+        # [img_per_place, num_places, D] -> [num_places, img_per_place, D]
+        x_encoded = x_encoded.permute(1, 0, 2)
+        x_encoded = x_encoded.contiguous().view(B, D)
+        
+        x_encoded = nn.functional.normalize(x_encoded, p=2, dim=1)
 
-        return s + s_encoded  # Residual connection
+        return x + x_encoded  # Residual connection
