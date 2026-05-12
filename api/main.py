@@ -37,7 +37,7 @@ from slowapi.util import get_remote_address
 from api.routers import retrieve, index, health
 from api.services.retrieval import RetrievalService
 from api.services.triton_client import TritonVPRClient
-from api.services.local_inference import LocalVPRClient
+# Bỏ import LocalVPRClient ở global để tránh lỗi thiếu PyTorch trên Render
 from api.services.metrics import GALLERY_SIZE, TRITON_READY
 from api.config import Settings
 
@@ -74,6 +74,8 @@ async def lifespan(app: FastAPI):
     # 1. Inference Client (Local or Triton)
     if settings.use_local_inference:
         logger.info("Using LocalVPRClient (Local Inference) ...")
+        # Chỉ import khi chạy local để tránh lỗi thiếu torch trên Render
+        from api.services.local_inference import LocalVPRClient
         triton_client = LocalVPRClient(
             model_path="deployment/triton_models/vpr_encoder/1/model.pt"
         )
