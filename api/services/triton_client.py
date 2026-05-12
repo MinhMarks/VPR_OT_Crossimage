@@ -99,7 +99,7 @@ class TritonVPRClient:
                 outputs=[infer_output],
             )
 
-            descriptor = response.as_numpy("output__0")[0]   # [D]
+            descriptor = response.as_numpy("output__0")   # [N, D]
             return descriptor.astype(np.float32)
 
         except HTTPException:
