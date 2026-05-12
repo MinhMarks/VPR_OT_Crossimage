@@ -1,0 +1,30 @@
+# PyTorch (install separately based on your CUDA version)
+# See: https://pytorch.org/get-started/locally/
+# torch>=2.0.0
+# torchvision>=0.15.0
+
+# Core dependencies
+pytorch-lightning>=2.0.0
+pytorch-metric-learning>=2.3.0
+torchmetrics>=1.0.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+Pillow>=9.0.0
+
+# Visualization & logging
+prettytable>=3.0.0
+tensorboard>=2.14.0
+rich>=13.0.0  # For RichProgressBar
+
+# FAISS for similarity search
+# For CPU: pip install faiss-cpu
+# For GPU: pip install faiss-gpu
+faiss-cpu>=1.7.0
+
+# Optional: for faster training
+# xformers  # Install separately: pip install xformers
+
+# Development
+tqdm>=4.65.0
