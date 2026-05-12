@@ -1,0 +1,98 @@
+\subsection{CrossSalad1}
+Để nâng cao hiệu suất truy vấn, nhóm đề xuất phương pháp CrossSalad1 nhằm tinh chỉnh vector đặc trưng của ảnh bằng cách sử dụng attention chéo giữa các embedding trong cùng batch. Ý tưởng cốt lõi là khai thác thông tin bổ sung từ các góc nhìn khác nhau của cùng một địa điểm để làm phong phú đặc trưng.
+
+\paragraph{Ý tưởng chính}
+Ở một địa điểm bất kỳ, một tấm ảnh chỉ thể hiện được từ một góc nhìn và khi embedding thì với một vector embedding của một image bất kỳ sẽ không thể hiện đủ các chi tiết ``đặc trưng'' của place đó. Tại sao không tận dụng chi tiết trong các ảnh còn lại? Đó là cross salad. Và hơn nữa, nếu ta chọn một tập batch\_size ảnh ở các địa điểm bất kỳ, ta không những học được các đặc điểm của place đó theo nhiều góc nhìn mà còn biết được đặc điểm nào là cần và quan trọng khi so với các ảnh khác trong cùng batch.
+
+\paragraph{Triển khai}
+Nguyên sơ nhất của cross image knowledge là chỉ dùng attention trên batch 40, xem mỗi embedding vector là một từ và cho nó attention bổ sung nghĩa lẫn nhau. Mỗi place sẽ có 4 tấm ảnh.
+
+\paragraph{Kết quả}
+nhóm đánh giá phương pháp CrossSalad1 trên tập dữ liệu MSLS validation với các cấu hình batch size khác nhau. Kết quả được trình bày trong Bảng~\ref{tab:crosssalad1_results}.
+
+\begin{table}[t]
+\centering
+\caption{Kết quả của phương pháp CrossSalad1 trên MSLS validation set với các batch size khác nhau. Giá trị tốt nhất được in \textbf{đậm}. Baseline là K@1: 89.05\%, K@5: 94.46\%.}
+\label{tab:crosssalad1_results}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Batch Size} & \textbf{K@1 (\%)} & \textbf{Cải thiện K@1} & \textbf{K@5 (\%)} & \textbf{Cải thiện K@5} & \textbf{Ghi chú} \\
+\midrule
+Baseline & 89.05 & - & 94.46 & - & - \\
+Batch 40 & \textbf{90.81} & +1.76 & \textbf{95.41} & +0.95 & - \\
+Batch 50 & 90.71 & +1.66 & 95.32 & +0.86 & - \\
+Batch 60 & - & - & - & - & Hết RAM \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Vấn đề hiện tại}
+Phiên bản này bị một vấn đề là ngoài đời thực, khi cần truy vấn sẽ có 2 vấn đề: một là cần đợi người dùng khác để đủ batch size, hoặc giả thiết lập ảnh để đủ batch size. Thì tụ chung sẽ tăng thời gian inference( lâu hơn_. Do đó, nhóm làm thêm phiên bản CrossSalad2 để khắc phục.
+
+\subsection{CrossSalad2}
+(Đây là ý tưởng sẽ được tập trung triển khai tiếp). CrossSalad2 là phiên bản cải tiến của CrossSalad1, tập trung vào việc áp dụng attention chỉ trong cùng một địa điểm để tránh phụ thuộc vào batch size lớn.
+
+\paragraph{Ý tưởng chính}
+Ở một địa điểm bất kỳ, một tấm ảnh chỉ thể hiện được từ một góc nhìn và khi embedding thì với một vector embedding của một image bất kỳ sẽ không thể hiện đủ các chi tiết ``đặc trưng'' của place đó. Tại sao không tận dụng chi tiết trong các ảnh còn lại? Đó là cross salad. CrossSalad2 khác với CrossSalad1 chỗ nó sẽ không khai thác được đặc điểm nào là cần và quan trọng khi so với các ảnh khác trong cùng batch.
+
+\paragraph{Triển khai}
+Cụ thể trong lúc training thì sẽ cho áp attention trên 4 tấm ảnh cùng place, khi training thì sẽ duplicate ảnh query lên 4.
+
+\paragraph{Kết quả}
+Kết quả thực nghiệm ban đầu trên server cho thấy hiệu suất chưa đạt kỳ vọng so với baseline. Các thử nghiệm chi tiết được trình bày trong Bảng~\ref{tab:crosssalad2_results}.
+
+\begin{table}[t]
+\centering
+\caption{Kết quả của phương pháp CrossSalad2 trên MSLS validation set. Baseline là K@1: 89.05\%, K@5: 94.46\%.}
+\label{tab:crosssalad2_results}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Phiên bản} & \textbf{K@1 (\%)} & \textbf{K@5 (\%)} \\
+\midrule
+Baseline & 89.05 & 94.46 \\
+CrossSalad2 (Server) & 44.43 & 65.43 \\
+Lấy mean description sau attention & Chưa thực nghiệm & Chưa thực nghiệm \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Trước đó trên Kaggle code lỏ, sài RAM hao nên không chạy được. Phiên bản lấy mean description của các ảnh sau khi đã attention: Chưa thực nghiệm do chưa hoàn thiện được ý tưởng CrossSalad2.
+
+\paragraph{Quan sát}
+Kết quả trên server cho thấy hiệu suất thấp hơn baseline đáng kể, có thể do vấn đề với việc duplicate query ảnh và attention cục bộ. nhóm sẽ tập trung hoàn thiện ý tưởng và thử nghiệm thêm để cải thiện.
+
+\subsection{MN\_Salad}
+MN\_Salad là phiên bản cải tiến aggregator bằng cách tăng số lượng cluster để lưu trữ nhiều đặc điểm địa điểm hơn.
+
+\paragraph{Ý tưởng}
+Sau khi aggregate, thì vector embedding sẽ có dạng [num\_cluster, cluster\_dimension] và default là [64, 128]. Nhưng nhóm giả định mỗi cluster tương ứng với một đặc điểm nào đó (cột điện, cây cối, cây cầu, mái nhà, vạch kẻ đường, ...). Do đó, nhiều cluster thì sẽ lưu được nhiều đặc điểm hơn.
+
+\paragraph{Triển khai}
+Đơn giản tăng num\_cluster lên và giảm cluster\_dimension xuống.
+
+\paragraph{Kết quả}
+Kết quả được trình bày trong Bảng~\ref{tab:mnsalad_results}.
+
+\begin{table}[t]
+\centering
+\caption{Kết quả của phương pháp MN\_Salad trên MSLS validation set.}
+\label{tab:mnsalad_results}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Phương pháp} & \textbf{K@1 (\%)} & \textbf{K@5 (\%)} \\
+\midrule
+Baseline & 90.5 & 95.4 \\
+MN\_Salad & 90.81 & 95.41 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Quan sát}
+Cải thiện nhẹ so với baseline, chứng tỏ việc tăng cluster giúp lưu trữ đặc điểm tốt hơn nhưng chưa đạt mức đột phá. nhóm sẽ kết hợp với các phiên bản CrossSalad để thử nghiệm thêm.
+
+
+\subsection{Tình hình sử dụng server}
+Do dung lượng lưu trữ hạn chế và các bộ dữ liệu huấn luyện cùng đánh giá có số lượng nhiều, kích thước lớn, nhóm đã ưu tiên lưu trữ chỉ bộ dữ liệu huấn luyện, đồng thời thực hiện luân phiên tải về và xóa các bộ đánh giá để quản lý không gian. Ngoài ra, với bộ nhớ RAM bị giới hạn, nhóm đã áp dụng các công cụ chuyên dụng để xử lý và luân phiên chuyển các khối (chunk) vector embedding vào bộ nhớ. Tổng thể, quy trình vẫn có thể triển khai hiệu quả, dù đòi hỏi thêm thời gian cho các bước quản lý dữ liệu.

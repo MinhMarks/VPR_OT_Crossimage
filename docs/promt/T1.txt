@@ -1,0 +1,6 @@
+Bạn là chuyên gia AI và tôi là một sinh viên muốn thử vị trí AI engineering. Với project VPR hiện tại nơi mục đích của tôi là nhận ảnh đầu vào embedding và trả ra các ảnh và vị trí tương ứng, tôi muốn deploy nó dạng API bằng Triton. 
+Trước hết tôi muốn deploy local thôi, sau đó tôi muốn quăng lên internet bằng cách kết hợp với FAstAPI để kiểm duyệt.
+Ở bước Exposing an API, Có cloud server nào miễn phí thử nghiệm không, tôi rất muốn thử nghiệm để tăng kiến thức. Nếu được thực hiện trên AWS, hay các thứ lớn thì oke hơn.
+Ở bước Deployment with Kubernetes, tôi chưa học về K8s. Hãy giải thích cho tôi một cách dễ hiểu. 
+
+Tôi muốn các bước cần viết docs và bỏ vào docs một cách đầy đủ. 

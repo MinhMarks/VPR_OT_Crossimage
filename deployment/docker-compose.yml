@@ -1,0 +1,214 @@
+# VPR Deployment Stack – Docker Compose
+#
+# Services:
+#   triton      – NVIDIA Triton Inference Server (GPU)
+#   vpr-api     – FastAPI gateway
+#   prometheus  – Metrics scraper (scrapes vpr-api + triton)
+#   grafana     – Dashboard UI (port 3000)
+#
+# Usage (local):
+#   docker compose up --build
+#
+# Access:
+#   FastAPI Swagger: http://localhost:8080/docs
+#   Prometheus:      http://localhost:9090
+#   Grafana:         http://localhost:3000  (admin / admin)
+#
+# Requirements:
+#   - Docker Desktop with WSL2 + NVIDIA Container Toolkit
+#   - model.pt inside deployment/triton_models/vpr_encoder/1/
+#   - gallery_index.faiss + gallery_meta.json inside api/data/
+
+version: "3.9"
+
+services:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Triton Inference Server
+  # ────────────────────────────────────────────────────────────────────────────
+  triton:
+    image: nvcr.io/nvidia/tritonserver:24.05-py3
+    container_name: vpr_triton
+    restart: unless-stopped
+    command: >
+      tritonserver
+        --model-repository=/models
+        --log-verbose=1
+        --allow-metrics=true
+        --metrics-port=8002
+        --cuda-memory-pool-byte-size=0:67108864
+        --pinned-memory-pool-byte-size=67108864
+    ports:
+      - "8000:8000" # HTTP inference
+      - "8001:8001" # gRPC inference
+      - "8002:8002" # Metrics (Prometheus-compatible)
+    volumes:
+      - ./triton_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/v2/health/ready" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - vpr_net
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # FastAPI Gateway
+  # ────────────────────────────────────────────────────────────────────────────
+  vpr-api:
+    build:
+      context: .. # project root
+      dockerfile: deployment/Dockerfile.api
+    container_name: vpr_api
+    restart: unless-stopped
+    environment:
+      - TRITON_HOST=triton
+      - TRITON_HTTP_PORT=8000
+      - TRITON_GRPC_PORT=8001
+      - API_KEY=${VPR_API_KEY:-dev-secret-key}
+      - LOG_LEVEL=info
+      - MILVUS_HOST=milvus
+    ports:
+      - "8080:8080" # FastAPI + /metrics endpoint
+    depends_on:
+      triton:
+        condition: service_healthy
+    networks:
+      - vpr_net
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Prometheus – metrics scraper
+  # Scrapes: vpr-api:8080/metrics + triton:8002/metrics
+  # ────────────────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: vpr_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d" # giữ data 7 ngày
+      - "--web.enable-lifecycle" # cho phép reload config không restart
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - vpr-api
+    networks:
+      - vpr_net
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Grafana – dashboard UI
+  # Default login: admin / admin (đổi ngay lần đầu)
+  # ────────────────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: vpr_grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro # auto-setup datasource
+    depends_on:
+      - prometheus
+    networks:
+      - vpr_net
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Milvus Vector Database
+  # ────────────────────────────────────────────────────────────────────────────
+  etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: [ "CMD", "etcdctl", "endpoint", "health" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - vpr_net
+
+  minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - minio_data:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - vpr_net
+
+  milvus:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.4.16
+    command: [ "milvus", "run", "standalone" ]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - etcd
+      - minio
+    networks:
+      - vpr_net
+
+  attu:
+    container_name: milvus-attu
+    image: zilliz/attu:v2.4.7
+    ports:
+      - "8080:8000"
+    environment:
+      MILVUS_URL: milvus:19530
+    networks:
+      - vpr_net
+    depends_on:
+      - milvus
+
+networks:
+  vpr_net:
+    driver: bridge
+
+volumes:
+  prometheus_data: # Persistent Prometheus TSDB
+  grafana_data: # Persistent Grafana dashboards + settings
+  etcd_data:
+  minio_data:
+  milvus_data:

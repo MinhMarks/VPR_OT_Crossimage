@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: vpr-api-gateway
+    env: python
+    buildCommand: pip install -r deployment/requirements-render.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: USE_LOCAL_INFERENCE
+        value: "false"
+      - key: TRITON_HOST
+        sync: false                             # Nhập trên Dashboard (URL Hugging Face của bạn)
+      - key: TRITON_HTTP_PORT
+        value: "443"                            # Hugging Face Spaces sử dụng cổng 443 (HTTPS)
+      - key: TRITON_USE_SSL
+        value: "true"
+      - key: MILVUS_HOST
+        sync: false                             # Nhập trên Dashboard (URL Zilliz Cloud)
+      - key: MILVUS_PORT
+        value: "443"                            # Zilliz sử dụng cổng 443
+      - key: MILVUS_TOKEN
+        sync: false                             # Nhập trên Dashboard (Token bảo mật từ Zilliz)
+      - key: API_KEY
+        generateValue: true                     # Render sẽ tự động sinh ra một key bảo mật cho bạn

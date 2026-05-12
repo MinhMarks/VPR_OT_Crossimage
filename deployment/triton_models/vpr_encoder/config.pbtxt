@@ -1,0 +1,60 @@
+# Triton Inference Server – VPR Encoder Model Config
+#
+# Model: DINOv2 ViT-B/14 + SALAD Aggregator (TorchScript)
+# Input:  image tensor  [batch, 3, H, W]  – float32
+# Output: descriptor    [batch, 8448]      – float32  (64 clusters × 128 + 256 token)
+#
+# Descriptor dim = num_clusters × cluster_dim + token_dim
+#               = 64 × 128 + 256 = 8448
+
+name: "vpr_encoder"
+platform: "pytorch_libtorch"
+max_batch_size: 0
+
+# ── Inputs ──────────────────────────────────────────────────────────────────
+input [
+  {
+    name: "input__0"
+    data_type: TYPE_FP32
+    # [Batch, Channels, Height, Width]
+    dims: [ -1, 3, -1, -1 ]
+  }
+]
+
+# ── Outputs ─────────────────────────────────────────────────────────────────
+output [
+  {
+    name: "output__0"
+    data_type: TYPE_FP32
+    # [Batch, DescriptorDim]
+    dims: [ -1, 8448 ]
+  }
+]
+
+# ── Instance group (GPU preferred, fall back to CPU) ───────────────────────
+instance_group [
+  {
+    count: 1
+    kind: KIND_CPU
+  }
+]
+
+# ── Dynamic batching ────────────────────────────────────────────────────────
+# Disabled for cross-attention model to avoid mixing user requests
+# dynamic_batching {
+#   preferred_batch_size: [ 1, 4, 8 ]
+#   max_queue_delay_microseconds: 5000
+# }
+
+# ── Model optimization ──────────────────────────────────────────────────────
+# Tạm thời tắt CUDA Graphs để tiết kiệm VRAM trên máy laptop 4GB
+# optimization {
+#   execution_accelerators {
+#     gpu_execution_accelerator: [
+#       {
+#         name: "cuda_graphs"
+#         parameters { key: "inference_mode" value: "true" }
+#       }
+#     ]
+#   }
+# }

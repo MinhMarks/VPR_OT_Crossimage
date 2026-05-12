@@ -1,0 +1,33 @@
+# Prometheus scrape configuration for VPR stack
+#
+# Scrapes:
+#   1. vpr-api     – FastAPI custom metrics + HTTP metrics (port 8080)
+#   2. triton      – Triton built-in Prometheus metrics (port 8002)
+#   3. prometheus  – Self-monitoring
+
+global:
+  scrape_interval:     15s   # Lấy metrics mỗi 15 giây
+  evaluation_interval: 15s   # Đánh giá alert rules mỗi 15 giây
+  external_labels:
+    service: vpr
+
+scrape_configs:
+
+  # ── FastAPI VPR API ────────────────────────────────────────────────────────
+  - job_name: "vpr-api"
+    static_configs:
+      - targets: ["vpr-api:8080"]   # hostname trong Docker network
+    metrics_path: "/metrics"
+
+  # ── Triton Inference Server ────────────────────────────────────────────────
+  # Triton expose Prometheus metrics tại port 8002 theo mặc định
+  # Bao gồm: inference request count, queue time, compute time, GPU utilization
+  - job_name: "triton"
+    static_configs:
+      - targets: ["triton:8002"]
+    metrics_path: "/metrics"
+
+  # ── Prometheus self-monitoring ─────────────────────────────────────────────
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

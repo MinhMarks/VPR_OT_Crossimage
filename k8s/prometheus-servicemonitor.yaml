@@ -1,0 +1,47 @@
+# K8s ServiceMonitor – Prometheus Operator sẽ tự phát hiện service này
+# Yêu cầu: kube-prometheus-stack đã được cài trên cluster
+#
+# Cài kube-prometheus-stack (nếu chưa có):
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm install kube-prom prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+#
+# Apply:
+#   kubectl apply -f k8s/prometheus-servicemonitor.yaml
+
+---
+# ── FastAPI VPR API ────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vpr-api-monitor
+  namespace: vpr
+  labels:
+    release: kube-prom    # phải khớp với Prometheus Operator selector
+spec:
+  selector:
+    matchLabels:
+      app: fastapi
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+
+---
+# ── Triton Inference Server ────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: triton-monitor
+  namespace: vpr
+  labels:
+    release: kube-prom
+spec:
+  selector:
+    matchLabels:
+      app: triton
+  endpoints:
+    - port: metrics       # port name "metrics" trong triton-service.yaml
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s

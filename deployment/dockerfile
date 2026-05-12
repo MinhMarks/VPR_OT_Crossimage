@@ -1,0 +1,18 @@
+# 1. Sử dụng image Triton chính thức từ NVIDIA
+FROM nvcr.io/nvidia/tritonserver:24.05-py3
+
+# 2. Chuyển sang root để có quyền copy và cài đặt
+USER root
+
+# 3. Copy toàn bộ thư mục model vào trong container
+# Đảm bảo đường dẫn này khớp với cấu trúc bạn upload
+COPY deployment/triton_models /models
+
+# 4. Hugging Face Spaces bắt buộc app phải chạy trên cổng 7860
+EXPOSE 7860
+
+# 5. Lệnh khởi chạy Triton Server
+# --http-port=7860: Ép Triton chạy trên cổng HF yêu cầu
+# --model-repository: Chỉ đường dẫn tới thư mục chứa model
+# --allow-gpu-metrics=false: Tắt các chỉ số GPU vì chúng ta chạy trên CPU
+CMD ["tritonserver", "--model-repository=/models", "--allow-gpu-metrics=false", "--http-port=7860"]

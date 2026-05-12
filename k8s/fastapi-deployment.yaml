@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi
+  namespace: vpr
+  labels:
+    app: fastapi
+spec:
+  replicas: 2                          # 2 instances for availability
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+        - name: fastapi
+          image: YOUR_REGISTRY/vpr-api:latest   # replace with your Docker registry
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TRITON_HOST
+              value: "triton-svc"              # K8s service name (DNS auto-resolves)
+            - name: TRITON_HTTP_PORT
+              value: "8000"
+            - name: GALLERY_INDEX_PATH
+              value: "/data/gallery_index.faiss"
+            - name: GALLERY_META_PATH
+              value: "/data/gallery_meta.json"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vpr-secrets
+                  key: api-key
+            - name: LOG_LEVEL
+              value: "info"
+          volumeMounts:
+            - name: gallery-data
+              mountPath: /data
+              readOnly: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: gallery-data
+          persistentVolumeClaim:
+            claimName: gallery-pvc

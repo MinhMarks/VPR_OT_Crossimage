@@ -6,7 +6,7 @@ from dataloaders.GSVCitiesDataloader import GSVCitiesDataModule
 
 if __name__ == '__main__':        
     datamodule = GSVCitiesDataModule(
-        batch_size=20,
+        batch_size=40,
         img_per_place=4,
         min_img_per_place=4,
         shuffle_all=False, # shuffle all images or keep shuffling in-city only
@@ -31,7 +31,6 @@ if __name__ == '__main__':
             'num_clusters': 64,
             'cluster_dim': 128,
             'token_dim': 256,
-            'img_per_place': 4,  # Must match datamodule's img_per_place
         },
         lr = 6e-5,
         optimizer='adamw',
@@ -49,8 +48,7 @@ if __name__ == '__main__':
         # FastAPLoss, CircleLoss, SupConLoss,
         loss_name='MultiSimilarityLoss',
         miner_name='MultiSimilarityMiner', # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
-        miner_margin=0.1, 
-        # distance='euclidean',
+        miner_margin=0.1,
         faiss_gpu=False
     )
 
@@ -73,17 +71,13 @@ if __name__ == '__main__':
         devices=1,
         default_root_dir=f'./logs/', # Tensorflow can be used to viz 
         num_nodes=1,
-        num_sanity_val_steps=1, # runs a validation step before stating training
+        num_sanity_val_steps=0, # runs a validation step before stating training
         precision='16-mixed', # we use half precision to reduce  memory usage
         max_epochs=4,
         check_val_every_n_epoch=1, # run validation every epoch
         callbacks=[checkpoint_cb],# we only run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
-        # limit_train_batches=5,   # chỉ train trên 5 batch
-        # limit_val_batches=2,     # chỉ validate 2 batch
-        # train_dataloader_kwargs={"drop_last": True},
-        # val_dataloader_kwargs={"drop_last": True},
     )
 
     # we call the trainer, we give it the model and the datamodule

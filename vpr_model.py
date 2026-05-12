@@ -165,16 +165,7 @@ class VPRModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         places, _ = batch
-        
-        # Use cross-image enhanced forward for validation
-        # Check if aggregator supports cross-image
-        if hasattr(self.aggregator, 'forward_single_with_cross_image'):
-            # Extract backbone features first
-            backbone_out = self.backbone(places)
-            descriptors = self.aggregator.forward_single_with_cross_image(backbone_out)
-        else:
-            # Fallback to standard forward
-            descriptors = self(places)
+        descriptors = self(places)
         
         # Handle dataloader_idx properly
         if dataloader_idx is None:

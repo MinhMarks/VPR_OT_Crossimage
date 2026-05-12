@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-svc
+  namespace: vpr
+  labels:
+    app: fastapi          # ServiceMonitor selector matches this label
+spec:
+  selector:
+    app: fastapi
+  ports:
+    - name: http          # ServiceMonitor dùng tên này để tìm port
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP    # internal — Ingress will expose it externally

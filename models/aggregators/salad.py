@@ -1,199 +1,205 @@
+import math
 import torch
 import torch.nn as nn
 
-from .salad_base import SALADBase
-from .cross_image_encoder import CrossImageEncoder
+# Code adapted from OpenGlue, MIT license
+# https://github.com/ucuapps/OpenGlue/blob/main/models/superglue/optimal_transport.py
+def log_otp_solver(log_a, log_b, M, num_iters: int = 20, reg: float = 1.0) -> torch.Tensor:
+    r"""Sinkhorn matrix scaling algorithm for Differentiable Optimal Transport problem.
+    This function solves the optimization problem and returns the OT matrix for the given parameters.
+    Args:
+        log_a : torch.Tensor
+            Source weights
+        log_b : torch.Tensor
+            Target weights
+        M : torch.Tensor
+            metric cost matrix
+        num_iters : int, default=100
+            The number of iterations.
+        reg : float, default=1.0
+            regularization value
+    """
+    M = M / reg  # regularization
+
+    u, v = torch.zeros_like(log_a), torch.zeros_like(log_b)
+
+    for _ in range(num_iters):
+        u = log_a - torch.logsumexp(M + v.unsqueeze(1), dim=2).squeeze()
+        v = log_b - torch.logsumexp(M + u.unsqueeze(2), dim=1).squeeze()
+
+    return M + u.unsqueeze(2) + v.unsqueeze(1)
+
+# Code adapted from OpenGlue, MIT license
+# https://github.com/ucuapps/OpenGlue/blob/main/models/superglue/superglue.py
+def get_matching_probs(S, dustbin_score = 1.0, num_iters=3, reg=1.0):
+    """sinkhorn"""
+    batch_size, m, n = S.size()
+    # augment scores matrix
+    # Dùng S.new_empty thay cho torch.empty(..., device=S.device) để tránh tracer 'baking' hằng số cpu
+    S_aug = S.new_empty(batch_size, m + 1, n + 1)
+    S_aug[:, :m, :n] = S
+    S_aug[:, m, :n] = dustbin_score
+    S_aug[:, :m, n] = dustbin_score
+    S_aug[:, m, n] = dustbin_score
+
+    # prepare normalized source and target log-weights
+    # Thay vì dùng torch.tensor, dùng S.new_tensor hoặc math float
+    norm = math.log(m + n)
+    log_a = S.new_zeros(batch_size, m + 1)
+    log_b = S.new_zeros(batch_size, n + 1)
+
+    log_P = log_otp_solver(
+        log_a,
+        log_b,
+        S_aug,
+        num_iters=num_iters,
+        reg=reg
+    )
+    # Norm là float, trừ bình thường (Broadcasting)
+    return (log_P + norm)[:, :, :-1]
 
 
 class SALAD(nn.Module):
     """
-    Full SALAD with optional cross-image learning.
-    
-    Combines SALADBase (pretrained) with CrossImageEncoder (trainable).
-    
-    Usage:
-        # Create model
-        model = SALAD(num_channels=768, ...)
-        
-        # Load pretrained base weights
-        model.load_base_weights('pretrained_salad.pth')
-        model.freeze_base()  # Optional: only train cross_encoder
-        
-        # Training
-        descriptor = model(x)  # Auto uses cross-image when training
-        
-        # Inference
-        query_desc = model.forward_single(x)      # For queries
-        db_desc = model.forward_database(x)       # For database with cross-image
-    """
+    This class represents the Sinkhorn Algorithm for Locally Aggregated Descriptors (SALAD) model.
 
-    def __init__(
-        self,
-        num_channels=1536,
-        num_clusters=64,
-        cluster_dim=128,
-        token_dim=256,
-        dropout=0.3,
-        img_per_place=4,
-    ):
+    Attributes:
+        num_channels (int): The number of channels of the inputs (d).
+        num_clusters (int): The number of clusters in the model (m).
+        cluster_dim (int): The number of channels of the clusters (l).
+        token_dim (int): The dimension of the global scene token (g).
+        dropout (float): The dropout rate.
+    """
+    def __init__(self,
+            num_channels=1536,
+            num_clusters=64,
+            cluster_dim=128,
+            token_dim=256,
+            dropout=0.3,
+        ) -> None:
         super().__init__()
 
-        self.num_clusters = num_clusters
+        self.num_channels = num_channels
+        self.num_clusters= num_clusters
         self.cluster_dim = cluster_dim
         self.token_dim = token_dim
-        self.img_per_place = img_per_place
+        
+        if dropout > 0:
+            dropout = nn.Dropout(dropout)
+        else:
+            dropout = nn.Identity()
 
-        # Base SALAD (can load pretrained weights)
-        self.base = SALADBase(
-            num_channels=num_channels,
-            num_clusters=num_clusters,
-            cluster_dim=cluster_dim,
-            token_dim=token_dim,
-            dropout=dropout,
+        # MLP for global scene token g
+        self.token_features = nn.Sequential(
+            nn.Linear(self.num_channels, 512),
+            nn.ReLU(),
+            nn.Linear(512, self.token_dim)
+        )
+        # MLP for local features f_i
+        self.cluster_features = nn.Sequential(
+            nn.Conv2d(self.num_channels, 512, 1),
+            dropout,
+            nn.ReLU(),
+            nn.Conv2d(512, self.cluster_dim, 1)
+        )
+        # MLP for score matrix S
+        self.score = nn.Sequential(
+            nn.Conv2d(self.num_channels, 512, 1),
+            dropout,
+            nn.ReLU(),
+            nn.Conv2d(512, self.num_clusters, 1),
         )
 
-        # Cross-image encoder (now working on global token)
-        self.cross_encoder = CrossImageEncoder(
-            input_dim=token_dim,
-            img_per_place=img_per_place,
-            dropout=dropout,
+
+        # Cho qua một encoder nhỏ để học mối quan hệ cross-image
+        self.place_encoder = nn.Sequential(
+            nn.Conv1d(cluster_dim, cluster_dim, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv1d(cluster_dim, cluster_dim, kernel_size=1)
         )
 
-    def load_base_weights(self, checkpoint_path, strict=True):
+        # Dustbin parameter z
+        self.dust_bin = nn.Parameter(torch.tensor(1.))
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model= cluster_dim * num_clusters,              # embedding dimension
+            nhead=8,                 # số "đầu" attention song song
+            dim_feedforward=8192,     # độ rộng MLP bên trong
+            activation="gelu",        # hàm kích hoạt cho FFN
+            dropout=0.1,              # tỉ lệ dropout
+            batch_first=False         # input shape [seq_len, batch, dim]
+        )
+
+        self.cross_image_encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
+
+
+
+    def forward(self, x):
         """
-        Load pretrained weights for SALADBase only.
-        CrossImageEncoder remains randomly initialized.
-        """
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        x (tuple): A tuple containing two elements, f and t. 
+            (torch.Tensor): The feature tensors (t_i) [B, C, H // 14, W // 14].
+            (torch.Tensor): The token tensor (t_{n+1}) [B, C].
 
-        # Handle different checkpoint formats
-        if "state_dict" in checkpoint:
-            state_dict = checkpoint["state_dict"]
-        else:
-            state_dict = checkpoint
-
-        # Filter and remap keys for base module
-        base_state_dict = {}
-        base_keys = ["token_features", "cluster_features", "score", "dust_bin"]
-
-        for k, v in state_dict.items():
-            new_key = k
-            # Remove common prefixes
-            for prefix in ["aggregator.", "model.aggregator.", "base."]:
-                if k.startswith(prefix):
-                    new_key = k[len(prefix) :]
-                    break
-
-            if any(new_key.startswith(name) for name in base_keys):
-                base_state_dict[new_key] = v
-
-        self.base.load_state_dict(base_state_dict, strict=strict)
-        print(f"Loaded {len(base_state_dict)} base weights from {checkpoint_path}")
-
-    def load_cross_encoder_weights(self, checkpoint_path, strict=True):
-        """Load pretrained weights for CrossImageEncoder only."""
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
-
-        if "state_dict" in checkpoint:
-            state_dict = checkpoint["state_dict"]
-        else:
-            state_dict = checkpoint
-
-        cross_state_dict = {}
-        for k, v in state_dict.items():
-            new_key = k
-            for prefix in ["cross_encoder.", "model.cross_encoder."]:
-                if k.startswith(prefix):
-                    new_key = k[len(prefix) :]
-                    break
-
-            if new_key.startswith("encoder"):
-                cross_state_dict[new_key] = v
-
-        self.cross_encoder.load_state_dict(cross_state_dict, strict=strict)
-        print(f"Loaded {len(cross_state_dict)} cross-encoder weights")
-
-    def freeze_base(self):
-        """Freeze base SALAD weights, only train cross-image encoder."""
-        for param in self.base.parameters():
-            param.requires_grad = False
-
-    def unfreeze_base(self):
-        """Unfreeze base SALAD weights."""
-        for param in self.base.parameters():
-            param.requires_grad = True
-
-    def forward(self, x, use_cross_image=True):
-        """
-        Forward pass with optional cross-image learning.
-        
-        Cross-image is applied only when:
-        - use_cross_image=True
-        - model.training=True  
-        - batch_size is divisible by img_per_place
-        """
-        s, t = self.base.compute_features(x)
-
-        if use_cross_image and self.training and s.shape[0] % self.img_per_place == 0:
-            # Apply to global token t
-            t = self.cross_encoder(t)
-
-        return self.base.build_descriptor(s, t)
-
-    def forward_single(self, x):
-        """Forward for single image (query inference) - no cross-image."""
-        return self.base(x)
-
-    def forward_single_with_cross_image(self, x):
-        """
-        Forward for single image with cross-image enhancement.
-        Duplicates each image img_per_place times to apply cross-image.
-        
-        Args:
-            x: (features [B, C, H, W], token [B, C])
         Returns:
-            descriptor [B, descriptor_dim]
-            
-        Note: When duplicating the same image, cross-image attention will
-        see identical inputs. The output will be consistent with training
-        distribution since it goes through the same layers.
+            f (torch.Tensor): The global descriptor [B, m*l + g]
         """
-        features, token = x
-        B = features.shape[0]
-        
-        # Duplicate each image img_per_place times
-        # Use repeat_interleave to keep same image together:
-        # [img1, img1, img1, img1, img2, img2, img2, img2, ...]
-        features_dup = features.repeat_interleave(self.img_per_place, dim=0)  # [B*img_per_place, C, H, W]
-        token_dup = token.repeat_interleave(self.img_per_place, dim=0)  # [B*img_per_place, C]
-        
-        # Compute base features
-        s, t = self.base.compute_features((features_dup, token_dup))
-        
-        # Apply cross-image
-        # Each group of img_per_place will be the same image duplicated
-        # Apply to global token t instead of s
-        t = self.cross_encoder(t)
-        
-        # Build descriptor for all duplicates
-        descriptors = self.base.build_descriptor(s, t)  # [B*img_per_place, descriptor_dim]
-        
-        # Reshape and take first (all duplicates should be identical after cross-image)
-        descriptors = descriptors.view(B, self.img_per_place, -1)[:, 0, :]  # [B, descriptor_dim]
-        
-        # Re-normalize after selection
-        descriptors = nn.functional.normalize(descriptors, p=2, dim=-1)
-        
-        return descriptors
+        x, t = x # Extract features and token
 
-    def forward_database(self, x):
-        """
-        Forward for database images with cross-image enhancement.
-        Batch size must be divisible by img_per_place.
-        """
-        s, t = self.base.compute_features(x)
+        # x [ B, C , H, W ] 
+        f = self.cluster_features(x).flatten(2) # [batch , cluster_dim, num_patch]
+        p = self.score(x).flatten(2)
+        t = self.token_features(t)
 
-        if s.shape[0] % self.img_per_place == 0:
-            t = self.cross_encoder(t)
+        # Sinkhorn algorithm
+        p = get_matching_probs(p, self.dust_bin, 3)
+        p = torch.exp(p)
+        # Normalize to maintain mass
+        p = p[:, :-1, :] # [batch , num_cluster, num_patch]
 
-        return self.base.build_descriptor(s, t)
+
+        # [B, 1, num_clusters, num_patches] , [B, cluster_dim, num_clusters, num_patches] 
+        p = p.unsqueeze(1).repeat(1, self.cluster_dim, 1, 1) 
+
+        # [B, cluster_dim, 1, num_patches]  [B, cluster_dim, num_clusters, num_patches] 
+        f = f.unsqueeze(2).repeat(1, 1, self.num_clusters, 1)
+
+        q = f * p                                  # [B, cluster_dim, num_clusters, num_patches]
+        s = q.sum(dim=-1)    # [B, cluster_dim, num_clusters] 
+
+
+        # -------------------------------
+        # KHAI THÁC TÍNH CHẤT CHUNG GIỮA 4 ẢNH TRONG CÙNG MỘT PLACE
+        # -------------------------------
+
+        B, cluster_dim, num_clusters = s.shape
+        img_per_place = 4
+        num_places = B // img_per_place
+
+        # Gom nhóm 4 ảnh theo từng place
+        s_place = s.view(num_places, img_per_place, cluster_dim, num_clusters)
+        
+        # Flatten cluster features
+        s_seq = s_place.flatten(2)  # [num_places, img_per_place, cluster_dim*num_clusters]
+
+        # Permute để phù hợp với Transformer
+        s_seq = s_seq.permute(1, 0, 2)  # [seq_len=img_per_place, batch=num_places, embed_dim]
+
+        s_encoded = self.cross_image_encoder(s_seq) 
+
+        # Chuyển ngược về [B, cluster_dim, num_clusters]
+        s_encoded = s_encoded.permute(1, 0, 2)  # [num_places, img_per_place, embed_dim]
+        s_encoded = s_encoded.contiguous().view(B, cluster_dim, num_clusters)
+
+        s_encoded = nn.functional.normalize(s_encoded, p=2, dim=1)
+        # ==== Thêm normalize chho s_encoded ở đây 
+        s = s + s_encoded  # residual enhancement
+
+        f = torch.cat([
+            nn.functional.normalize(t, p=2, dim=-1),
+
+            #  nhân từng phân tử với từng mẫu và cộng dồn theo chiều patches 
+            #  [B, cluster_dim, num_clusters] 
+            nn.functional.normalize(s, p=2, dim=1).flatten(1)
+        ], dim=-1)
+
+        return nn.functional.normalize(f, p=2, dim=-1)

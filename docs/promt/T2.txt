@@ -1,0 +1,6 @@
+Trước giờ tôi training model trên kaggle, tập dataset cũng link từ kaggle qua vì nó cũng khá nặng. 
+Tôi muốn bạn sử dụng Milvus hoặc Pinecone để làm database vector, và lấy trích vẫn phần hoặc đầy đủ của GSV-Cities dataset để làm database mà truy vấn. 
+
+Ở bước infernce tôi muốn mỗi lần nhập của user sẽ có có ít nhất 4 bước ảnh, nếu không đủ thì sẽ tự duplicate lên. Tại vì tôi sử dụng phiên bảng 
+
+Model sau khi fine tune lai tôi để trong ./pretrainedWeight/result, nhưng vấn đề là model tôi chạy nó nằm ở branch github khác branchCrossSalad1. 

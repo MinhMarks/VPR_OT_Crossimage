@@ -1,0 +1,21 @@
+ - Mục 1,2 : Phần base còn chung chung, chưa đủ ý.  
+ - Mục 1.2 : Viết cái contribution chính giới thiệu ưu nhược điểm.
+ 
+
+ - Mục 3 : Chia thành đề xuất của nhân và nhật( 2 subsection) 
+        + 3.1 hoàn thiện sau khi làm xong 3.2,3.3, 3.4, 3.5 
+        + 3.2 Trình bày về SALAD gốc. 
+        + 3.3 CrossImageEncoder. 
+        + 3.4 grid 
+        + 3.5 Final Description 
+ - Mục 4 đẩy gọn vào mục 8, ngắn gọn. 
+ - Mục 5 đẩy gọn vào mục 8, ngắn gọn đầy đủ. 
+ - Mục 6 xóa 
+ - Mục 7 đẩy gọn vào mục 8, ngắn gọn 
+ - Mục 8 : 
+        + 
+ - Mục 9 : 
+        + Ưu nhược điểm. 
+ - Mục 10: 
+
+
