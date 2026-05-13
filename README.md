@@ -114,6 +114,23 @@ uvicorn api.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 Sau đó, mở file `frontend/index.html` bằng trình duyệt (hoặc dùng Live Server extension) để trải nghiệm giao diện.
 
+### 4.5. Triển khai với Kubernetes trên Google Cloud Shell (Miễn phí)
+Nếu máy tính không đủ tài nguyên (RAM) để chạy các thành phần cục bộ, bạn có thể triển khai API Gateway và Triton Server trên nền tảng **Google Cloud Shell** hoàn toàn miễn phí.
+1. Truy cập [Google Cloud Console](https://console.cloud.google.com/) và kích hoạt **Cloud Shell**.
+2. Khởi tạo cụm Kubernetes siêu nhỏ: `minikube start`
+3. Tải mã nguồn lên Cloud Shell và cấu hình docker-env: `eval $(minikube docker-env)`
+4. Build API Gateway Image trực tiếp trên Cloud:
+   ```bash
+   docker build -t vpr-api-gateway:latest -f deployment/Dockerfile.api .
+   ```
+5. Khởi chạy các resource của Kubernetes:
+   ```bash
+   kubectl apply -f deployment/k8s/
+   ```
+6. **Mở Web Preview:** Forward port bằng lệnh `kubectl port-forward service/vpr-api-service 8080:80` và sử dụng chức năng "Web Preview" của Cloud Shell trên port 8080 để test API trực tiếp (kèm đường dẫn `/docs`).
+*(Tham khảo chi tiết tại `docs/deployment/08-gcp-cloud-shell-k8s.md`)*
+
+
 ---
 
 ## 🗃 5. Xây dựng Kho dữ liệu (Gallery Population)
