@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpr-triton-deployment
+  labels:
+    app: vpr-triton
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpr-triton
+  template:
+    metadata:
+      labels:
+        app: vpr-triton
+    spec:
+      containers:
+        - name: triton-server
+          image: nvcr.io/nvidia/tritonserver:23.08-py3
+          command: ["tritonserver", "--model-repository=/models"]
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8001
+              name: grpc
+            - containerPort: 8002
+              name: metrics
+          # Mount model repository từ local của Minikube vào trong Pod
+          # Trong thực tế Production, đây có thể là S3 Bucket hoặc PersistentVolumeClaim (EBS)
+          volumeMounts:
+            - name: model-repository
+              mountPath: /models
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1000m"
+            limits:
+              memory: "6Gi"
+              cpu: "2000m"
+      volumes:
+        - name: model-repository
+          hostPath:
+            # Sửa đường dẫn này trỏ tới thư mục chứa file model.pt trên máy tính/VM của bạn
+            path: /path/to/your/VPR-OT/salad/deployment/triton_models
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpr-triton-service
+spec:
+  selector:
+    app: vpr-triton
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+    - name: grpc
+      protocol: TCP
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP # Dùng ClusterIP vì chỉ API Gateway nội bộ mới gọi tới Triton

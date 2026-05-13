@@ -19,9 +19,6 @@ RUN pip install --no-cache-dir -r requirements_api.txt
 
 # Copy API source
 COPY api/ ./api/
-COPY vpr_model.py ./
-COPY models/ ./models/
-COPY utils/ ./utils/
 
 # Create data directory for FAISS index
 RUN mkdir -p /app/data

@@ -1,0 +1,8 @@
+Có cách nào để làm google cloud shell thành 1 server không. 
+
+Tôi nghe nói render hoặc zilliz hay huggingface sẽ tắt server sau một thời gian không hoạt động nhất định. Hãy giúp tôi cải thiện. 
+
+Tôi muốn tạo thêm frontend một trang web hoàn chỉnh cho tát vụ trên, mục tiêu là show cho nhà tuyển dụng thấy. Tôi muốn chúng ta có thể có 2 lựa chọn server fastAPI gọi tới cái render và 1 cái gọi tới kubernet trên google cloud terminal. 
+
+Với cả hiện tại tôi truy vấn hình ảnh nhưng hệ thống chỉ trả ra tên của tấm hình thôi chứ không hiện hình ảnh. 
+

@@ -45,6 +45,12 @@ class Settings(BaseSettings):
         description="API key for Bearer authentication",
     )
 
+    # Image Hosting
+    imgbb_api_key: str = Field(
+        "",
+        description="ImgBB API key for hosting gallery images (get free at imgbb.com)",
+    )
+
     # App
     log_level: str = Field("info", description="Logging level")
     top_k_default: int = Field(5, description="Default number of results")

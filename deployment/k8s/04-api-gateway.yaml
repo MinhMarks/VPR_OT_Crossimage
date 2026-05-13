@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpr-api-deployment
+  labels:
+    app: vpr-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpr-api
+  template:
+    metadata:
+      labels:
+        app: vpr-api
+    spec:
+      containers:
+        - name: api-gateway
+          image: vpr-api-gateway:latest # Sử dụng image build tại local/minikube registry
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: vpr-config
+            - secretRef:
+                name: vpr-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpr-api-service
+spec:
+  selector:
+    app: vpr-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: NodePort # Hoặc LoadBalancer nếu chạy trên Cloud (AWS EKS, GCP GKE)

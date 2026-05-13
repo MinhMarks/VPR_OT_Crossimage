@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPR System — Visual Place Recognition</title>
+    <meta name="description" content="Demo hệ thống nhận dạng địa điểm trực quan (VPR) sử dụng DINOv2-SALAD với kiến trúc Multi-Cloud.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon">⬡</div>
+                <div>
+                    <div class="logo-title">VPR System</div>
+                    <div class="logo-sub">Visual Place Recognition</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <!-- Health Indicators -->
+                <div class="health-bar">
+                    <div class="health-item" id="triton-status">
+                        <span class="dot dot-loading"></span>
+                        <span>Triton</span>
+                    </div>
+                    <div class="health-item" id="gallery-status">
+                        <span class="dot dot-loading"></span>
+                        <span id="gallery-label">Gallery</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Server Selector -->
+    <div class="server-bar">
+        <div class="server-bar-inner">
+            <span class="server-label">🌐 Backend:</span>
+            <div class="server-toggle">
+                <button class="toggle-btn active" id="btn-render" onclick="switchServer('render')">
+                    ☁️ Render (Cloud)
+                </button>
+                <button class="toggle-btn" id="btn-k8s" onclick="switchServer('k8s')">
+                    ⚙️ Kubernetes
+                </button>
+            </div>
+            <div class="server-url-wrap" id="k8s-url-wrap" style="display:none">
+                <input type="text" id="k8s-url" class="server-url-input"
+                    placeholder="http://127.0.0.1:8080"
+                    value="http://127.0.0.1:8080">
+                <button class="apply-btn" onclick="applyK8sUrl()">Apply</button>
+            </div>
+            <div class="api-key-wrap">
+                <input type="password" id="api-key-input" class="api-key-input"
+                    placeholder="API Key" value="2959537a8c2d7c9e6b4d1a7c5f2e8d0b">
+            </div>
+            <div class="current-url-badge" id="current-url-badge"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="showTab('retrieve')">
+                🔍 Truy vấn địa điểm
+            </button>
+            <button class="tab-btn" onclick="showTab('index')">
+                📸 Thêm vào Gallery
+            </button>
+        </div>
+
+        <!-- RETRIEVE TAB -->
+        <div class="tab-content active" id="tab-retrieve">
+            <div class="card upload-card">
+                <h2 class="card-title">Truy vấn địa điểm</h2>
+                <p class="card-desc">Upload một bức ảnh, hệ thống sẽ tìm ra những địa điểm tương tự nhất trong cơ sở dữ liệu.</p>
+
+                <div class="upload-zone" id="retrieve-dropzone" onclick="document.getElementById('retrieve-file').click()">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Kéo thả hoặc bấm để chọn ảnh truy vấn</div>
+                    <div class="upload-hint">Hỗ trợ JPG, PNG, WEBP</div>
+                    <img id="retrieve-preview" class="preview-img" style="display:none">
+                </div>
+                <input type="file" id="retrieve-file" accept="image/*" style="display:none" onchange="previewImage('retrieve')">
+
+                <div class="controls-row">
+                    <div class="control-group">
+                        <label class="control-label">Top-K kết quả</label>
+                        <input type="range" id="top-k" min="1" max="20" value="5" class="slider"
+                            oninput="document.getElementById('top-k-val').textContent = this.value">
+                        <span class="slider-val" id="top-k-val">5</span>
+                    </div>
+                    <button class="btn-primary" id="retrieve-btn" onclick="doRetrieve()">
+                        🔍 Tìm kiếm
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="retrieve-results" style="display:none">
+                <div class="results-header">
+                    <h3 class="results-title">Kết quả tìm kiếm</h3>
+                    <div class="results-meta" id="results-meta"></div>
+                </div>
+                <div class="results-grid" id="results-grid"></div>
+            </div>
+
+            <div class="empty-state" id="retrieve-empty">
+                <div class="empty-icon">🗺️</div>
+                <div class="empty-text">Chọn một ảnh và nhấn Tìm kiếm để bắt đầu</div>
+            </div>
+        </div>
+
+        <!-- INDEX TAB -->
+        <div class="tab-content" id="tab-index">
+            <div class="card upload-card">
+                <h2 class="card-title">Thêm ảnh vào Gallery</h2>
+                <p class="card-desc">Upload ảnh địa điểm và điền thông tin. Ảnh sẽ được nhúng (embed) và lưu vào cơ sở dữ liệu vector để tìm kiếm sau này.</p>
+
+                <div class="upload-zone" id="index-dropzone" onclick="document.getElementById('index-file').click()">
+                    <div class="upload-icon">🖼️</div>
+                    <div class="upload-text">Kéo thả hoặc bấm để chọn ảnh gallery</div>
+                    <div class="upload-hint">Hỗ trợ JPG, PNG, WEBP</div>
+                    <img id="index-preview" class="preview-img" style="display:none">
+                </div>
+                <input type="file" id="index-file" accept="image/*" style="display:none" onchange="previewImage('index')">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Tên địa điểm</label>
+                        <input type="text" id="place-name" class="form-input" placeholder="VD: Chợ Bến Thành, TP.HCM">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vĩ độ (Latitude)</label>
+                        <input type="number" id="lat" class="form-input" placeholder="VD: 10.7769" step="0.0001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kinh độ (Longitude)</label>
+                        <input type="number" id="lon" class="form-input" placeholder="VD: 106.7009" step="0.0001">
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="index-btn" onclick="doIndex()">
+                    📸 Thêm vào Gallery
+                </button>
+            </div>
+
+            <div class="card" id="index-result-card" style="display:none">
+                <div class="success-banner" id="index-result-msg"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">Đang xử lý...</div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

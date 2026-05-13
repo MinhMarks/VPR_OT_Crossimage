@@ -216,6 +216,14 @@ class RetrievalService:
             collection_name=self.collection_name,
             data=data
         )
+
+        # Flush để ép Zilliz cập nhật row_count trong stats ngay lập tức
+        # (Không flush thì get_collection_stats trả về số cũ do delay)
+        try:
+            self.client.flush(collection_name=self.collection_name)
+        except Exception as e:
+            logger.warning(f"Flush warning (non-critical): {e}")
+
         # return first id
         if res and "ids" in res:
             return res["ids"][0]

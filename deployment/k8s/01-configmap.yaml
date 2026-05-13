@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vpr-config
+  labels:
+    app: vpr-api
+data:
+  # Cấu hình để API dùng Triton nội bộ của Kubernetes
+  USE_LOCAL_INFERENCE: "false"
+  TRITON_HOST: "vpr-triton-service" # Tên service của Triton trong K8s
+  TRITON_HTTP_PORT: "8000"
+  TRITON_USE_SSL: "false"           # Chạy nội bộ Cluster nên không cần SSL
+  
+  # Cấu hình Zilliz Cloud (Thay bằng URL Zilliz thực tế của bạn)
+  MILVUS_HOST: "in03-adf6fed6c6b9e2b.serverless.aws-eu-central-1.cloud.zilliz.com"
+  MILVUS_PORT: "443"
+
+  # Cấu hình Log
+  LOG_LEVEL: "info"
