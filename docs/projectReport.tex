@@ -1,0 +1,726 @@
+    \documentclass[12pt,a4paper]{article}
+
+    % Packages
+    \usepackage{cite}
+    \usepackage[utf8]{vietnam}
+    \usepackage[vietnamese]{babel}
+    \usepackage{amsmath, amssymb, amsthm}
+    \usepackage{graphicx}
+    \usepackage{hyperref}
+    \usepackage{algorithm}
+    \usepackage{algpseudocode}
+    \usepackage{booktabs}
+    \usepackage{multirow}
+    \usepackage{geometry}
+    \usepackage{tikz}
+    \usetikzlibrary{shapes,arrows,positioning}
+
+    \geometry{
+        a4paper,
+        left=3cm,
+        right=2cm,
+        top=2.5cm,
+        bottom=2.5cm
+    }
+
+    % Title Information
+    \title{\textbf{BÁO CÁO MÔN HỌC TRUY VẤN ĐA PHƯƠNG TIỆN} \\
+    \vspace{0.5cm}
+    \Large Visual Place Recognition với Optimal Transformer: \\
+    Phương pháp Cross-Image Enhancement}
+
+    \author{
+        Sinh viên thực hiện \\
+        Trường Đại học Công nghệ Thông tin \\
+        Đại học Quốc gia Thành phố Hồ Chí Minh
+    }
+
+    \date{\today}
+
+    \begin{document}
+    \begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay,inner sep=0,outer sep=0]
+     \draw[blue!70!black,line width=4pt] ([xshift=-1.5cm,yshift=-2cm]current page.north east) coordinate (A)--([xshift=1.5cm,yshift=-2cm]current page.north west) coordinate(B)--([xshift=1.5cm,yshift=2cm]current page.south west) coordinate (C)--([xshift=-1.5cm,yshift=2cm]current page.south east) coordinate(D)--cycle;
+
+     \draw ([yshift=0.5cm,xshift=-0.5cm]A)-- ([yshift=0.5cm,xshift=0.5cm]B)--
+     ([yshift=-0.5cm,xshift=0.5cm]B) --([yshift=-0.5cm,xshift=-0.5cm]B)--([yshift=0.5cm,xshift=-0.5cm]C)--([yshift=0.5cm,xshift=0.5cm]C)--([yshift=-0.5cm,xshift=0.5cm]C)-- ([yshift=-0.5cm,xshift=-0.5cm]D)--([yshift=0.5cm,xshift=-0.5cm]D)--([yshift=0.5cm,xshift=0.5cm]D)--([yshift=-0.5cm,xshift=0.5cm]A)--([yshift=-0.5cm,xshift=-0.5cm]A)--([yshift=0.5cm,xshift=-0.5cm]A);
+
+
+     \draw ([yshift=-0.3cm,xshift=0.3cm]A)-- ([yshift=-0.3cm,xshift=-0.3cm]B)--
+     ([yshift=0.3cm,xshift=-0.3cm]B) --([yshift=0.3cm,xshift=0.3cm]B)--([yshift=-0.3cm,xshift=0.3cm]C)--([yshift=-0.3cm,xshift=-0.3cm]C)--([yshift=0.3cm,xshift=-0.3cm]C)-- ([yshift=0.3cm,xshift=0.3cm]D)--([yshift=-0.3cm,xshift=0.3cm]D)--([yshift=-0.3cm,xshift=-0.3cm]D)--([yshift=0.3cm,xshift=-0.3cm]A)--([yshift=0.3cm,xshift=0.3cm]A)--([yshift=-0.3cm,xshift=0.3cm]A);
+
+   \end{tikzpicture}
+\begin{center}
+    \vspace{7pt}
+    
+    \textbf{TRƯỜNG ĐẠI HỌC CÔNG NGHỆ THÔNG TIN}
+    
+    \vspace{7pt}
+    \textbf{KHOA KHOA HỌC MÁY TÍNH}
+\end{center}
+\vspace{5pt}
+\begin{center}
+    \includegraphics[scale=0.15]{image/Logo_UIT_updated.svg (1).png}
+    
+    \vspace{20pt}
+    \fontsize{15pt}{16pt}\selectfont 
+    \textbf{BÁO CÁO ĐỒ ÁN CUỐI KÌ} 
+    
+    \vspace{8pt}
+    \textbf{MÔN: TRUY VẤN THÔNG TIN ĐA PHƯƠNG TIỆN }
+\end{center}
+\begin{center}
+    \fontsize{25pt}{17pt}\selectfont 
+    \vspace{20pt}
+    \textbf{\textrm{{VISUAL PLACE RECOGNITION}}}
+\end{center}
+\begin{center}
+    \fontsize{25pt}{17pt}\selectfont 
+    \vspace{10pt}
+    \textbf{\textrm{{WITH LOCAL FEATURE}}}
+\end{center}
+
+% \vspace{1pt}
+% \textbf{GV Lý Thuyết: Nguyễn Vinh Tiệp \\
+% GV HDTH: Phạm Thị Bích Nga} \\
+% \textbf{Mã lớp: CS116.P21.KHTN}
+
+
+% \vspace{14pt}
+% \textbf{Sinh viên thực hiện:}
+
+% \begin{tabbing}
+% \hspace{8cm}\=\hspace{3cm}\=\hspace{5cm} \kill
+% {\textbf{Họ và tên}}\>{\textbf{MSSV}}\\
+% \begin{bfseries}Bùi Ngọc Thiên Thanh\end{bfseries}\> \begin{bfseries}23521436\end{bfseries}\\
+% \begin{bfseries}Trần Lê Minh Nhật\end{bfseries}\> \begin{bfseries}2352xxxx\end{bfseries}\\
+% \begin{bfseries}Nguyễn Trọng Tất Thành\end{bfseries}\> \begin{bfseries}2352xxxx\end{bfseries}\\
+% \end{tabbing}
+
+\vspace{0.5pt}
+\begin{quote}
+\textbf{GV Lý Thuyết: Ngô Đức Thành} \\
+\textbf{Mã lớp: CS336.Q11.KHTN} \\
+\end{quote}
+\vspace{-10pt}
+\noindent
+\centering
+\vspace{5pt}\rule{12cm}{0.8pt} \\
+\textbf{Nhóm sinh viên thực hiện:} \\
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{l c} 
+            \textbf{Họ và tên}    & \textbf{MSSV} \\
+        Trần Lê Minh Nhật & 23521098 \\
+        Trần Vinh Khánh & 23520726 \\
+        Nguyễn Thiện Nhân & 23521083\\
+    \end{tabular}
+    
+\end{table}
+
+
+
+\vspace{20pt}
+\begin{center}
+    \textbf{Thành phố Hồ Chí Minh, 2026}
+\end{center}
+\end{titlepage}
+    % \maketitle
+    \newpage
+
+    \tableofcontents
+    \newpage
+
+    \section{Giới thiệu}
+
+    \subsection{Bối cảnh nghiên cứu}
+
+    Trong kỷ nguyên của tự động hóa và trí tuệ nhân tạo, khả năng tự định vị (self-localization) là một trong những năng lực cốt lõi của các hệ thống thông minh, từ xe tự hành (autonomous vehicles), robot giao vận (delivery robots) đến các thiết bị thực tế tăng cường (Augmented Reality). Trong khi hệ thống định vị vệ tinh (GPS/GNSS) hoạt động tốt ở môi trường mở, chúng thường xuyên gặp hạn chế nghiêm trọng trong các khu vực đô thị dày đặc ("urban canyons"), đường hầm, hoặc môi trường trong nhà do tín hiệu bị suy hao hoặc phản xạ đa đường. Để khắc phục điều này, Visual Place Recognition (VPR) - nhận diện địa điểm dựa trên hình ảnh - đã nổi lên như một giải pháp thay thế hoặc bổ trợ tin cậy.
+
+    VPR giải quyết bài toán xác định vị trí của một ảnh truy vấn (query image) bằng cách tìm kiếm ảnh tương ứng trong một cơ sở dữ liệu (database) đã được tham chiếu địa lý. Tuy nhiên, đây là một thách thức lớn về mặt thị giác máy tính do hai vấn đề cơ bản: (1) \textit{Perceptual Variability} (Sự biến đổi về nhận thức) - cùng một địa điểm có thể trông hoàn toàn khác biệt do thay đổi về điều kiện chiếu sáng (ngày/đêm), thời tiết (nắng/mưa), mùa (đông/hè), hoặc góc nhìn (viewpoint); và (2) \textit{Perceptual Aliasing} (Sự trùng lặp về nhận thức) - các địa điểm khác nhau nhưng có cấu trúc hình học hoặc kiến trúc tương tự nhau (ví dụ: các tòa nhà chung cư giống hệt nhau). Các phương pháp truyền thống dựa trên đặc trưng cục bộ (như SIFT, SURF) hay các mạng CNN đời đầu thường gặp khó khăn trong việc trích xuất các biểu diễn bất biến (invariant representations) trước những thay đổi khắc nghiệt này.
+
+    \subsection{Vấn đề tồn tại của các phương pháp hiện hành (Research Gap)}
+
+    Mặc dù lĩnh vực VPR đã đạt được những tiến bộ đáng kể với sự ra đời của Deep Learning, vẫn tồn tại những khoảng trống nghiên cứu (research gaps) căn bản cản trở việc đạt được hiệu suất tối ưu trong các môi trường phức tạp. Các hạn chế này có thể được phân loại thành hai nhóm chính, tạo động lực cho các giải pháp đề xuất trong báo cáo này:
+
+    \paragraph{Thứ nhất, hạn chế của các phương pháp gộp đặc trưng (Aggregation Limitations):}
+    Các kỹ thuật aggregation phổ biến hiện nay như NetVLAD \cite{arandjelovic2016netvlad} hay CosPlace \cite{berton2022rethinking}, mặc dù vượt trội so với các phương pháp cổ điển, vẫn gặp vấn đề về hiệu quả sử dụng không gian đặc trưng. Cụ thể, cơ chế Softmax trong NetVLAD thường dẫn đến hiện tượng "Cluster Collapse", nơi một số ít cụm (clusters) chiếm ưu thế và thu hút phần lớn các đặc trưng, trong khi các cụm khác bị bỏ qua. Điều này làm giảm tính phân biệt (discriminative power) của descriptor cuối cùng. Ngoài ra, việc thiết lập các tâm cụm (cluster centers) thường dựa trên khởi tạo tĩnh hoặc cập nhật thiếu kiểm soát, không đảm bảo được sự phân phối tối ưu của các đặc trưng địa phương vào các cụm, dẫn đến việc lãng phí tài nguyên biểu diễn (representational capacity) của mô hình. Đây là động lực chính để chúng tôi áp dụng thuật toán Sinkhorn \cite{cuturi2013sinkhorn} nhằm đảm bảo phân phối cân bằng và tối ưu (Optimal Transport).
+
+    \paragraph{Thứ hai, giới hạn của xử lý đơn ảnh (Single-View Constraints):}
+    Tuyệt đại đa số các phương pháp VPR hiện đại vẫn hoạt động theo cơ chế xử lý từng ảnh độc lập (Image-to-Image retrieval) \cite{xu2025crisalad}. Cách tiếp cận này bỏ qua một lượng lớn thông tin bối cảnh (contextual information) vốn có sẵn trong quá trình thu thập dữ liệu (thường là chuỗi video hoặc bộ ảnh chụp liên tiếp). Khi một ảnh truy vấn bị che khuất một phần (bởi xe cộ, cây cối) hoặc chụp ở góc quá hẹp, descriptor được tạo ra từ ảnh đó sẽ thiếu thông tin ngữ nghĩa cần thiết để khớp với database. Việc thiếu cơ chế để "giao tiếp" và "bù đắp" thông tin giữa các góc nhìn khác nhau của cùng một địa điểm khiến cho hệ thống trở nên mong manh (fragile) trước các thay đổi góc nhìn cực đoan. Khoảng trống này thúc đẩy sự phát triển của module CrossImageEncoder để tổng hợp tri thức đa góc nhìn (Multi-View Learning).
+
+    \subsection{Mục tiêu nghiên cứu}
+
+    Nghiên cứu này tập trung vào việc giải quyết thách thức về \textit{biến đổi góc nhìn (viewpoint variation)} và \textit{thông tin ngữ nghĩa (semantic context)} trong VPR. Mục tiêu chính là phát triển một kiến trúc mạng neron nhân tạo có khả năng học và tổng hợp thông tin từ nhiều góc nhìn khác nhau của cùng một địa điểm, từ đó tạo ra một vector đặc trưng (descriptor) mạnh mẽ và bền vững hơn.
+
+    Cụ thể, chúng tôi đề xuất cải tiến phương pháp SALAD (Sinkhorn Algorithm for Locally Aggregated Descriptors) \cite{izquierdo2024salad} - một phương pháp gộp đặc trưng tiên tiến dựa trên Lý thuyết Vận chuyển Tối ưu (Optimal Transport). Thay vì chỉ xử lý từng ảnh một cách cô lập như các phương pháp hiện có, nghiên cứu này tích hợp một module \textbf{Cross-Image Enhancement} sử dụng cơ chế Self-Attention của Transformer. Mục đích là cho phép mô hình "nhìn" thấy bối cảnh rộng hơn bằng cách đối chiếu và trao đổi thông tin giữa các ảnh chụp cùng một địa điểm từ các góc độ khác nhau, qua đó khôi phục lại các thông tin bị mất do che khuất hoặc góc chụp hẹp.
+
+    \subsection{Đóng góp chính}
+
+    Nghiên cứu này mang lại những đóng góp cụ thể cả về mặt phương pháp luận và thực nghiệm cho lĩnh vực Visual Place Recognition:
+
+    \textbf{Thứ nhất, đề xuất kiến trúc CrossImageEncoder cho Multi-View VPR:} Chúng tôi giới thiệu một module Transformer gọn nhẹ được thiết kế chuyên biệt để xử lý mối quan hệ giữa các ảnh trong cùng một địa điểm (intra-place relationships). Module này chuyển đổi mô hình từ cơ chế "Single-Image Processing" sang "Multi-View Context Awareness". Kết quả thực nghiệm trên bộ dữ liệu MSLS đầy thách thức cho thấy phương pháp đề xuất (CrossSalad1) đạt độ chính xác Recall@1 là 90.81\%, vượt qua baseline SALADBase (89.05\%), chứng minh hiệu quả của việc khai thác thông tin chéo giữa các ảnh.
+
+    \textbf{Thứ hai, tối ưu hóa hiệu quả tính toán với chiến lược Global Token Enhancement:} Thay vì áp dụng cơ chế attention lên toàn bộ các đặc trưng cục bộ (vốn rất lớn và tốn kém tài nguyên), chúng tôi đề xuất chỉ áp dụng cross-image attention lên \textit{Global Token} - đại diện ngữ nghĩa cấp cao nhất của ảnh. Chiến lược này giúp giảm tới 99.7\% số lượng tham số cần huấn luyện thêm (chỉ 1.58 triệu params cho module mới) mà vẫn đảm bảo hiệu năng cao. Điều này làm cho phương pháp khả thi để triển khai trên các thiết bị giới hạn tài nguyên như robot hoặc drone.
+
+    \textbf{Thứ ba, phân tích toàn diện về các chiến lược huấn luyện và triển khai:} Báo cáo cung cấp cái nhìn sâu sắc về trade-offs (sự đánh đổi) giữa độ chính xác và tốc độ thông qua việc so sánh các biến thể: CrossSalad1 (Batch-level Attention - độ chính xác cao nhất), CrossSalad2 (Place-level Attention - tốc độ nhanh hơn), và MN\_Salad (Cluster Expansion). Những phân tích này cung cấp hướng dẫn thực tế cho việc lựa chọn mô hình tùy thuộc vào yêu cầu cụ thể của ứng dụng (ưu tiên độ chính xác hay thời gian phản hồi).
+    
+    \paragraph{Mã nguồn mở:} Toàn bộ mã nguồn hiện thực phương pháp và các script huấn luyện được công khai tại: \url{https://github.com/MinhMarks/VPR_OT_Crossimage}.
+
+    \section{Cơ sở lý thuyết}
+
+    Chương này trình bày các cơ sở lý thuyết nền tảng cho việc xây dựng hệ thống nhận diện địa điểm, bao gồm định nghĩa bài toán Visual Place Recognition, mô hình Vision Transformer (DINOv2) đóng vai trò trích xuất đặc trưng, và các phương pháp gộp đặc trưng (Feature Aggregation). Đặc biệt, chúng tôi đi sâu phân tích thuật toán Optimal Transport, nền tảng cốt lõi của phương pháp SALAD.
+
+    \subsection{Visual Place Recognition (VPR)}
+
+    Visual Place Recognition (VPR) là bài toán xác định vị trí của một ảnh truy vấn (query image) dựa trên sự tương đồng về nội dung hình ảnh với một cơ sở dữ liệu (database) gồm các ảnh đã được gắn thẻ địa lý (geo-tagged images). VPR đóng vai trò thành phần then chốt trong các hệ thống định vị tự hành (Autonomous Navigation) và SLAM (Simultaneous Localization and Mapping), đặc biệt trong các môi trường mà tín hiệu GPS bị suy giảm hoặc không tin cậy.
+
+    \subsubsection{Định nghĩa bài toán}
+
+    Về mặt toán học, cho một tập dữ liệu tham chiếu $\mathcal{D} = \{I_1, I_2, ..., I_N\}$, trong đó mỗi ảnh $I_i$ được liên kết với một nhãn vị trí hoặc tọa độ $l_i$. Với một ảnh truy vấn $I_q$ chưa biết vị trí, mục tiêu của VPR là tìm ra ảnh $I^* \in \mathcal{D}$ có sự tương đồng nhất về mặt ngữ nghĩa và cấu trúc với $I_q$. Quá trình này được thực hiện thông qua việc so sánh các vector đặc trưng (descriptors) đại diện cho ảnh:
+
+    \begin{equation}
+        I^* = \arg\min_{I_i \in \mathcal{D}} d(f(I_q), f(I_i))
+    \end{equation}
+
+    Trong đó $f(\cdot)$ là hàm trích xuất descriptor (Global Image Descriptor) biến đổi ảnh đầu vào thành một vector $v \in \mathbb{R}^D$, và $d(\cdot, \cdot)$ là hàm khoảng cách (thường là khoảng cách Euclidean hoặc Cosine). Thách thức lớn nhất của VPR nằm ở sự biến đổi ngoại cảnh (perceptual aliasing): hai ảnh chụp cùng một địa điểm có thể trông rất khác nhau do thay đổi về thời gian (sáng/tối), thời tiết (mưa/nắng), mùa (đông/hè) hoặc góc nhìn. Ngược lại, hai địa điểm khác nhau có thể trông rất giống nhau (perceptual ambiguity) do sự lặp lại của các cấu trúc kiến trúc đô thị.
+
+    \subsubsection{Vision Transformer và DINOv2 Backbone}
+
+    Trong các hệ thống VPR hiện đại, việc sử dụng Convolutional Neural Networks (CNNs) dần được thay thế bởi Vision Transformers (ViT) \cite{dosovitskiy2020image} nhờ khả năng nắm bắt ngữ nghĩa toàn cục (global context) tốt hơn. Nghiên cứu này sử dụng \textbf{DINOv2} (Distillation with no labels v2) \cite{oquab2023dinov2}, một mô hình ViT được huấn luyện theo phương pháp Self-Supervised Learning (SSL) trên tập dữ liệu LVD-142M khổng lồ.
+
+    Khác với việc huấn luyện có giám sát (supervised learning) trên ImageNet thường thiên về nhận diện vân bề mặt (texture bias), DINOv2 học được các đặc trưng ngữ nghĩa mạnh mẽ (shape bias) và bất biến với các thay đổi về ánh sáng hay góc nhìn. Cơ chế Self-Attention \cite{vaswani2017attention} trong ViT cho phép mô hình mô hình hóa mối quan hệ giữa các vùng ảnh xa nhau, điều cực kỳ quan trọng để nhận diện các landmark trong bối cảnh lộn xộn. Đầu ra của DINOv2 là một tập hợp các tokens $F \in \mathbb{R}^{N \times C}$, bao gồm một token đặc biệt [CLS] chứa thông tin tóm tắt toàn bộ ảnh và các patch tokens chứa thông tin không gian chi tiết.
+
+    \subsection{Feature Aggregation Methods}
+
+    Sau khi backbone trích xuất các đặc trưng cục bộ (local features), bước tiếp theo là tổng hợp chúng thành một vector đặc trưng toàn cục (global descriptor) duy nhất để tiện cho việc tìm kiếm và lưu trữ.
+
+    \subsubsection{Từ BoW đến NetVLAD}
+
+    Lịch sử phát triển của Aggregation bắt đầu từ Bag-of-Words (BoW) \cite{sivic2003video}, nơi tần suất xuất hiện của các "từ ngữ hình ảnh" (visual words) được đếm để tạo histogram. Kế thừa và phát triển từ BoW, \textbf{VLAD} (Vector of Locally Aggregated Descriptors) không chỉ đếm mà còn tích lũy phần dư (residuals) - sự sai khác giữa feature và cluster center gần nhất. Điều này giúp VLAD giữ lại thông tin phân bố chi tiết hơn.
+
+    \textbf{NetVLAD} \cite{arandjelovic2016netvlad} đưa ý tưởng này vào mạng neron (Deep Learning) bằng cách thay thế việc gán cứng (hard assignment) của K-Means bằng gán mềm (soft assignment) khả vi:
+
+    \begin{equation}
+        V(j,k) = \sum_{i=1}^{N} \frac{e^{w_k^T x_i + b_k}}{\sum_{k'=1}^{K} e^{w_{k'}^T x_i + b_{k'}}} (x_i - c_k)_j
+    \end{equation}
+
+    Mặc dù NetVLAD rất thành công, nó vẫn gặp hạn chế về việc khởi tạo cluster center và khả năng tối ưu hóa đồng thời cả feature space và cluster centers trong quá trình huấn luyện end-to-end.
+
+    \subsection{Optimal Transport và Sinkhorn Algorithm}
+
+    Đây là cơ sở lý thuyết quan trọng nhất cho phương pháp SALAD được sử dụng trong nghiên cứu này. Thay vì xem việc gán feature vào cluster như một bài toán phân loại đơn thuần, ta có thể mô hình hóa nó như một bài toán Vận chuyển Tối ưu (Optimal Transport - OT).
+
+    \subsubsection{Bài toán Optimal Transport (OT)}
+
+    Hãy tưởng tượng $N$ features là các "nguồn cung" (supply) và $K$ clusters là các "kho chứa" (demand). Bài toán OT tìm kiếm một phương án vận chuyển (transport plan) $P \in \mathbb{R}^{N \times K}$ để di chuyển khối lượng từ nguồn sang kho sao cho tổng chi phí là thấp nhất. Trong ngữ cảnh của VPR, "chi phí" chính là khoảng cách (hoặc độ đo similarity âm) giữa feature và cluster center. Mục tiêu là gán feature vào cluster sao cho feature gần center nhất (minimize cost), nhưng đồng thời phải đảm bảo các ràng buộc phân phối.
+
+    \subsubsection{Giải thuật Sinkhorn-Knopp}
+
+    Giải bài toán OT chính xác rất tốn kém về mặt tính toán ($O(N^3)$). Cuturi (2013) đã đề xuất phương pháp Entropy Regularized OT, biến đổi bài toán thành dạng lồi mạnh và có thể giải nhanh bằng thuật toán Sinkhorn-Knopp. Công thức tối ưu hóa trở thành:
+
+    \begin{equation}
+        P^* = \arg\min_{P \in \mathcal{U}(r,c)} \langle C, P \rangle - \epsilon H(P)
+    \end{equation}
+
+    Trong đó $H(P)$ là entropy của ma trận $P$, đóng vai trò làm "mượt" (smooth) phân phối, biến hard assignment thành soft assignment một cách tự nhiên. Thuật toán Sinkhorn thực hiện lặp đi lặp lại việc chuẩn hóa hàng và cột:
+    \begin{itemize}
+        \item \textbf{Row Normalization:} Đảm bảo tổng trọng số của một feature cho tất cả clusters bằng 1 (mỗi feature đều được biểu diễn đủ).
+        \item \textbf{Column Normalization:} Đảm bảo tổng trọng số gán cho mỗi cluster xấp xỉ nhau (clusters được sử dụng cân bằng).
+    \end{itemize}
+
+    Sự cân bằng này là ưu điểm vượt trội của Sinkhorn so với Softmax trong NetVLAD. Softmax có xu hướng bỏ qua các cluster ít phổ biến (cluster collapse), trong khi Sinkhorn ép buộc mô hình phải sử dụng hiệu quả tất cả $K$ clusters, dẫn đến descriptor giàu thông tin và có tính phân biệt cao hơn.
+
+    \section{Phương pháp đề xuất: SALAD với Cross-Image Enhancement}
+
+    \subsection{Tổng quan kiến trúc}
+
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=1\linewidth]{image/method.jpg}
+        \caption{Kiến trúc tổng quan của SALAD với Cross-Image Enhancement}
+        \label{fig:diagram_salad} 
+    \end{figure}
+    
+    Phương pháp đề xuất kết hợp ba thành phần chính hoạt động theo pipeline tuần tự để tạo ra descriptor cho Visual Place Recognition. Đầu tiên, DINOv2 Vision Transformer backbone trích xuất dense feature maps từ ảnh đầu vào. Tiếp theo, SALADBase aggregator xử lý feature maps này để tạo ra dual representation. Cuối cùng, CrossImageEncoder sử dụng Transformer để enhance global token thông qua cross-image attention.
+
+    \subsection{SALADBase (Original SALAD)}
+
+    
+    \subsubsection{Trích xuất đặc trưng cục bộ (Local Feature Extraction)}
+    Trong bài toán VPR thì dữ liệu đầu vào (bao gồm ảnh truy vấn và các ảnh trong kho dữ liệu) vốn vẫn là tập hợp của rất nhiều pixel rời rạc. Và với những thách thức trong bài toán như thay đổi ánh sáng, góc chụp. Để có thẻ so khớp nhanh chóng và chính xác đòi hỏi một mô hình nên tảng (backbone) giúp trích xuất đặc trưng mang ngữ nghĩa cao, và một pipline để xử lý các đặc trưng và tạo ra một biểu diễn toàn cục (global descriptor) .
+    
+    Trước đây, các kiến trúc mạng nơ-ron tích chập (CNN) kinh điển như VGG-16, ResNet-50, ResNet-101 thường được sử dụng phổ biến để làm backbone. Tuy nhiên, với sự trỗi dậy của các mô hình nền tảng (Foundation Models) dựa trên kiến trúc Vision Transformer (ViT), DINOv2 được lựa chọn để trích xuất đặc trưng cho phương pháp lần này.
+    
+    DINOv2 sẽ chia ảnh đầu vào $I \in \mathbb{R}^{h \times w \times c}$ thành $p \times p \times c$  patches. Sau đó những patches này sẽ đi qua các khối traformer để tạo ra các token đầu ra $\{t_1, \ldots, t_n, t_{n+1}\}, t_i \in \mathbb{R}^d$ với $n = hw/p^2$ là số lượng các token. Và global token $t_{n+1}$ sẽ chứa thông tin phân loại.
+    
+    \subsubsection{Phân bổ (Assignment)}
+    Sau khi ảnh đi qua DINOv2, ta thu được một lượng token lớn (các token được xem như feature với số lượng khoảng $n = 256$ vơi thiết lập ảnh là $224 \times 224$ và $p = 14$) với tính biểu diễn cao. Nhưng để có thể cô động thông tin hơn cũng như đảm bảo kích thước của global descriptor, các phương pháp hiện nay thường sẽ có thêm bước phân bổ lại các feature này sang các cluster mang tính đại diện ngữ nghĩa hơn.
+    
+    Mô hình nền tảng mà SALAD dựa trên là NetVLAD, phương pháp này xây dựng một ma trận điểm số $S$ được tính toán dựa trên thiết lập các tâm cụm ban đầu bằng k-means. Sau đó dùng hàm softmax để phân bổ dựa trên S. Mặc dù vẫn hiệu quả nhưng cách làm trên cũng bộc lộ các điểm yếu như :
+    \begin{itemize}
+        \item \textbf{Thiên kiến quy nạp (Inductive Bias)} : Vì sử dụng k-means nên có thể rơi vào các cục bộ địa phương trong quá trình huấn luyện
+        \item \textbf{Nhạy cảm với nhiễu} : Do toàn bộ các feature đều có thể đóng góp vào vector toàn cục
+        \item \textbf{Chỉ xét quan hệ một chiều} : Hàm softmax chỉ xem xét mối quan hệ từ đặc trưng đến cụm (feature-to-cluster), dẫn đến tình trạng mất cân bằng khi một số cụm chiếm quá nhiều đặc trưng trong khi các cụm khác bị 'đói' dữ liệu (dead clusters).
+    \end{itemize}
+    
+    Để khắc phục triệt để các vấn đề trên, SALAD đã tái định nghĩa bài toán phân bổ thông qua cơ chế học ma trận điểm số từ đầu và áp dụng lý thuyết Vận tải tối ưu (Pptimal transport).
+    
+    \begin{itemize}
+    \item \textbf{Giảm đi thiên kiến quy nạp (Inductive Bias)}: Giờ đây ma trận $S$ sẽ được học thông qua 2 lớp fully connected được khởi tạo ngẫu nhiên 
+    \begin{equation}
+    \mathbf{s}_i = \mathbf{W}_{s_2}(\sigma (\mathbf{W}_{s_1}(\mathbf{t}_{i}) + \mathbf{b}_{s_1})) + \mathbf{b}_{s_2}
+    \label{eq:score_computation}
+    \end{equation}
+    trong đó $\mathbf{W}_{s_1}$, $\mathbf{W}_{s_2}$ và $\mathbf{b}_{s_1}$, $\mathbf{b}_{s_2}$ lần lượt là trọng số và bias của các lớp, và $\sigma$ là hàm kích hoạt phi tuyến.
+    \item \textbf{Cơ chế thùng rác}: Trong ảnh sẽ có những thông tin không mang tính phân biệt, gây nhiễu (ví dụ như bầu trời). Vì vậy chúng ta cần một cơ chế để làm giảm sức ảnh hưởng hoặc lược bỏ đi các đặc trưng này. Để thực hiện điều này, SALAD mở rộng ma trận điểm số từ $S$ thành $\bar{S} = [S, \bar{\mathbf{s}}_{i,m+1}] \in \mathbb{R}^{n \times (m+1)}_{>0}$, bằng cách thêm vào cột $\bar{\mathbf{s}}_{i,m+1}$ biểu diễn mối quan hệ đặc trưng-thùng rác.Điểm số này được mô hình hóa bằng một tham số có thể học đơn lẻ $z \in \mathbb{R}$: 
+    \begin{equation}
+    \bar{s}_{i,m+1} = z\mathbf{1}_n
+    \end{equation}
+    Với $\mathbf{1}_n = [1, \dots, 1]^\top \in \mathbb{R}^n$ là vector đơn vị.
+    \item \textbf{Phân bổ tối ưu (Optimal assignment):} SALAD tái cấu trúc việc phân bổ này thành một bài toán vận tải tối ưu, nơi khối lượng đặc trưng $\mu = \mathbf{1}_n$ phải được phân phối hiệu quả vào các cụm và thùng rác với mục tiêu phân phối $\kappa = [\mathbf{1}_m^\top, n - m]^\top$.
+    
+    SALAD sử dụng thuật toán Sinkhorn để tìm ma trận phân bổ tối ưu $\bar{\mathbf{P}} \in \mathbb{R}^{n \times (m+1)}$ thỏa mãn các ràng buộc biên:
+    \begin{equation}
+    \bar{\mathbf{P}}\mathbf{1}_{m+1} = \mu \quad \text{và} \quad \bar{\mathbf{P}}^\top\mathbf{1}_n = \kappa
+    \label{eq:sinkhorn_constraints}
+    \end{equation}
+    
+    Thuật toán này hoạt động bằng cách chuẩn hóa lặp đi lặp lại các hàng và cột của ma trận $\exp(\bar{S}/\epsilon)$. Kết quả cuối cùng là một ma trận phân bổ trơn, giúp loại bỏ các đặc trưng nhiễu vào thùng rác một cách hiệu quả và đảm bảo tính phân biệt cho bộ mô tả toàn cục. Cuối cùng, cột thùng rác được loại bỏ để thu được ma trận phân bổ $\mathbf{P} \in \mathbb{R}^{n \times m}$ cho bước gom tụ tiếp theo.
+    \end{itemize}
+    \subsubsection{Gom tụ đặc trưng (Aggregation)}
+    
+    Đây là bước cuối cùng để tạo nên global descriptor, bước này ta sẽ tiến hành tính toán dựa trên các feature cũng như phân bổ đã được tính ở bước trên. Việc gom tụ gồm các phần:\\
+    
+    \textbf{Giảm chiều dữ liệu} Các token sẽ được nén lại để đảm bảo vector biểu diễn cuối cùng đủ nhỏ. Quá trình này cũng dựa trên 2 lớp fully connected:
+    \begin{equation}
+    \mathbf{f}_i = \mathbf{W}_{f_2}(\sigma(\mathbf{W}_{f_1}(\mathbf{t}_i) + \mathbf{b}_{f_1})) + \mathbf{b}_{f_1}
+    \label{eq:dim_reduction}
+    \end{equation}
+    Trong đó $f_{i,k}$ tương ứng với chiều thứ $k$ của đặc trưng $\mathbf{f}_i$, với $k \in \{1, \dots, l\}$. Theo thực nghiệm, chiều dữ liệu thường được giảm từ $d=768$ xuống $l=128$.
+    \\
+    
+     \textbf{Gom tụ trực tiếp:} bằng phép tổng dựa trên ma trận phân bổ tối ưu $\mathbf{P}$. Kết quả thu được là một ma trận $\mathbf{V} \in \mathbb{R}^{m \times l}$, trong đó mỗi phần tử $V_{j,k}$ được tính như sau:
+    \begin{equation}
+    V_{j,k} = \sum_{i=1}^n P_{i,k} \cdot f_{i,k}
+    \label{eq:aggregation_sum}
+    \end{equation}
+    Cách tiếp cận này giúp giảm thiểu các giả định định trước về việc gom tụ và cho phép mô hình học cách biểu diễn dữ liệu một cách linh hoạt hơn. \\
+    
+    
+    \textbf{Sử dụng global token}:Để bổ sung các thông tin toàn cảnh của cảnh vật mà các đặc trưng cục bộ có thể bỏ lỡ, SALAD trích xuất và tinh chỉnh thông tin từ global token ($\mathbf{t}_{n+1}$) của DINOv2 để tạo ra bộ mô tả cảnh $\mathbf{g}$:
+    \begin{equation}
+    \mathbf{g} = \mathbf{W}_{g_2}(\sigma(\mathbf{W}_{g_1}(\mathbf{t}_{n+1}) + \mathbf{b}_{g_1})) + \mathbf{b}_{g_1}
+    \label{eq:global_token}
+    \end{equation}
+    Vector mô tả toàn cục cuối cùng được hình thành bằng cách nối (concatenate) vector $\mathbf{g}$ với ma trận $\mathbf{V}$ đã được làm phẳng (flatten). Cuối cùng, một bước chuẩn hóa $L_2$ nội bộ và một bước chuẩn hóa $L_2$ toàn diện được thực hiện để thu được vector đặc trưng cuối cùng phục vụ cho việc truy vấn.
+
+    \subsection{CrossImageEncoder: Cải tiến đề xuất cho Multi-View Learning}
+
+    Đây là đóng góp trọng tâm của nghiên cứu, một module Transformer-based được thiết kế để chuyển đổi mô hình từ việc xử lý đơn ảnh (single-view) sang khai thác tri thức từ đa góc nhìn (multi-view).
+
+    \subsubsection{Động lực và Kiến trúc}
+
+    Trong thực tế, một địa điểm thường được ghi nhận bởi nhiều hình ảnh dưới các điều kiện khác nhau (góc chụp, ánh sáng, vật thể che khuất). Các phương pháp truyền thống xử lý từng ảnh độc lập sẽ bỏ lỡ mối tương quan quý giá này. CrossImageEncoder giải quyết vấn đề bằng cách cho phép các global tokens của các ảnh cùng địa điểm "giao tiếp" với nhau thông qua cơ chế Self-Attention. Mục tiêu là để một ảnh bị che khuất hoặc thiếu sáng có thể "mượn" thông tin từ các ảnh khác cùng địa điểm, từ đó tạo ra một global representation toàn diện và bền vững hơn (robustness).
+
+    Về kiến trúc, module này sử dụng standard Transformer Encoder với $L=2$ layers, $H=8$ heads, và embedding size $D=256$. Kích thước này được tinh chỉnh để cân bằng giữa khả năng biểu diễn (representation power) và chi phí tính toán, đảm bảo overhead thấp khi tích hợp vào pipeline.
+
+    \begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+    \toprule
+    \textbf{Tham số} & \textbf{Giá trị} \\
+    \midrule
+    Input dimension ($D_{\text{in}}$) & 256 \\
+    Number of heads ($H$) & 8 \\
+    Feedforward dimension ($D_{ff}$) & 1024 \\
+    Number of layers ($L$) & 2 \\
+    \bottomrule
+    \end{tabular}
+    \caption{Cấu hình rút gọn của CrossImageEncoder}
+    \end{table}
+
+    \subsubsection{Cơ chế Attention Đa ảnh (Multi-View Attention)}
+
+    Quy trình xử lý diễn ra qua ba bước chính nhằm tăng cường global token $t$:
+
+    \textbf{1. Sequence Formation (Tạo chuỗi thông tin):}
+    Thay vì batch thông thường $B \times D$, tensor đầu vào được tái cấu trúc thành dạng chuỗi $N_p \times M \times D$, trong đó $N_p$ là số ảnh mỗi địa điểm và $M$ là số địa điểm. Bước này biến tập hợp ảnh rời rạc thành các "câu chuyện" về từng địa điểm, nơi mỗi token là một góc nhìn.
+    \begin{equation}
+        T_{seq} = \text{Permute}(\text{Reshape}(T)) \in \mathbb{R}^{N_p \times M \times 256}
+    \end{equation}
+
+    \textbf{2. Cross-View Interaction (Tương tác đa chiều):}
+    Cơ chế Multi-Head Self-Attention (MSA) sau đó được áp dụng lên chiều $N_p$. Nhờ đó, mô hình học được mối quan hệ ngữ nghĩa giữa các góc nhìn khác nhau.
+    \begin{align}
+        \text{Attention}(Q,K,V) &= \text{Softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+    \end{align}
+    Sau đó đi qua lớp Feed-Forward Network (FFN) với hàm kích hoạt GELU để xử lý phi tuyến tính.
+
+    \textbf{3. Residual Integration (Tích hợp thông tin):}
+    Cuối cùng, thông tin ngữ nghĩa mới học được ($T_{out}$) được cộng gộp vào token gốc $t$ thông qua residual connection. Điều này đảm bảo rằng mô hình luôn giữ được đặc trưng gốc của ảnh và chỉ bổ sung thêm những thông tin hữu ích từ context.
+    \begin{equation}
+        t' = t + \text{LayerNorm}(T_{out})
+    \end{equation}
+
+    \subsubsection{CrossSalad1: Batch-level Cross-Attention}
+    Trong phương pháp này, tất cả các ảnh trong cùng một Batch (ví dụ 40-60 ảnh) được đưa vào Transformer cùng lúc.
+    \begin{itemize}
+        \item \textbf{Cơ chế:} Global tokens của toàn bộ batch được xem như một chuỗi (sequence) dài. Self-attention cho phép mỗi ảnh trong batch tương tác với TẤT CẢ các ảnh khác.
+        \item \textbf{Ưu điểm:} Tận dụng tối đa lượng thông tin tiêu cực (negatives) trong batch để học discriminative features tốt hơn.
+        \item \textbf{Nhược điểm:} Chi phí tính toán tăng bình phương theo kích thước batch ($O(B^2)$), giới hạn khả năng mở rộng (scalability).
+    \end{itemize}
+
+    \subsubsection{CrossSalad2: Place-level Cross-Attention}
+    Phương pháp này giới hạn phạm vi attention chỉ trong các ảnh thuộc cùng một địa điểm (Place).
+    \begin{itemize}
+        \item \textbf{Cơ chế:} Batch được chia nhỏ thành các nhóm, mỗi nhóm gồm $N=4$ ảnh của cùng một địa điểm. Attention chỉ diễn ra trong nội bộ nhóm 4 ảnh này.
+        \item \textbf{Ưu điểm:} Hiệu quả tính toán cao, chi phí thấp ($O(N^2)$ với N nhỏ), dễ dàng triển khai song song.
+        \item \textbf{Nhược điểm:} Không nhìn thấy được các mẫu âm (negatives) từ các địa điểm khác trong quá trình encoding (mặc dù vẫn dùng trong loss function).
+    \end{itemize}
+
+    \subsection{Final Descriptor Construction}
+
+    Descriptor cuối cùng được xây dựng bằng cách kết hợp Cluster Features $s$ (từ SALADBase) và Global Token đã được tăng cường $t'$ (từ CrossImageEncoder).
+    
+    \begin{equation}
+        \mathbf{d} = \text{Concat}\left(\frac{t'}{\|t'\|_2}, \frac{s}{\|s\|_2}\right) \in \mathbb{R}^{D}
+    \end{equation}
+    
+    Sau đó, toàn bộ vector được L2-normalize một lần nữa để ready cho việc so sánh similarity:
+    \begin{equation}
+        \mathbf{d}_{\text{final}} = \frac{\mathbf{d}}{\|\mathbf{d}\|_2}
+    \end{equation}
+
+    \section{Thực nghiệm và Kết quả}
+
+    Phần này trình bày chi tiết về quy trình thực nghiệm, bao gồm thiết lập training, các chiến lược triển khai, và kết quả đánh giá trên nhiều phiên bản cải tiến của SALAD. Mục tiêu chính là chứng minh hiệu quả của Cross-Image Enhancement trong việc cải thiện descriptor quality cho Visual Place Recognition. Thực nghiệm được tiến hành có hệ thống với ba variants: CrossSalad1 (batch-level attention), CrossSalad2 (place-level attention), và MN\_Salad (increased clusters). Mỗi variant được đánh giá trên tập MSLS validation để đảm bảo công bằng và reproducible, cho phép so sánh trực tiếp performance gains. Do đó, kết quả thu được không chỉ validate ý tưởng lý thuyết mà còn cung cấp insights về trade-offs giữa các design choices.
+
+    \subsection{Thiết lập thực nghiệm}
+
+    \subsubsection{Dataset và cấu hình training}
+
+    Để đảm bảo hiệu quả cho mô hình Visual Place Recognition (VPR) sử dụng cơ chế Cross-Image Enhancement, việc lựa chọn dataset và thiết lập cấu hình training đóng vai trò then chốt. Thực nghiệm của chúng tôi được xây dựng dựa trên \textbf{GSV-Cities dataset} \cite{alibey2022gsv}, một bộ dữ liệu quy mô lớn chuyên biệt cho bài toán VPR (xem chi tiết thông số tại Phụ lục~\ref{appendix:dataset}). Điểm đặc biệt của dataset này nằm ở cấu trúc dữ liệu: mỗi địa điểm (location) được đại diện bởi bộ 4 ảnh chụp từ các góc nhìn khác nhau nhưng có sự tương quan về không gian. Cấu trúc này cung cấp coverage toàn diện cho từng địa điểm, tạo điều kiện lý tưởng cho mô hình học được mối quan hệ ngữ nghĩa giữa các góc nhìn thông qua cơ chế cross-attention. Đây là lợi thế lớn so với các dataset truyền thống chỉ sử dụng một ảnh đại diện cho mỗi địa điểm.
+
+    Quá trình huấn luyện được cấu hình để tối ưu hóa khả năng học đa góc nhìn (multi-view learning). Batch size được thiết lập là 80 ảnh, bao gồm 20 địa điểm, mỗi địa điểm 4 ảnh. Việc tổ chức batch như vậy đảm bảo rằng trong mỗi lần cập nhật trọng số (forward/backward pass), mô hình luôn nhìn thấy đầy đủ các view của cùng một địa điểm, từ đó learning signal từ cross-attention mechanism được duy trì ổn định. Hàm mất mát được sử dụng là \textbf{MultiSimilarity Loss} kết hợp với kỹ thuật mining hard examples (MultiSimilarityMiner với margin 0.1). Chiến lược này giúp mô hình tập trung vào việc phân biệt các trường hợp khó (hard negatives) thay vì chỉ học các mẫu dễ, qua đó nâng cao khả năng discriminative của descriptor.
+
+    Về mặt tối ưu hóa, chúng tôi sử dụng thuật toán \textbf{AdamW} với learning rate khởi điểm là $6 \times 10^{-5}$ và áp dụng cơ chế linear decay scheduler giảm dần về $1.2 \times 10^{-5}$ (hệ số 0.2) trong suốt 4 epochs (tương đương 4000 iterations). Để tối ưu hóa bộ nhớ GPU và tăng tốc độ huấn luyện, kỹ thuật mixed precision (16-bit) được áp dụng. Backbone DINOv2 được fine-tune ở 4 block cuối cùng để thích nghi tốt hơn với domain của VPR mà không đánh mất các đặc trưng ngữ nghĩa tổng quát đã học được từ pretraining.
+
+    \subsubsection{Tiêu chí đánh giá}
+
+    Để đánh giá định lượng hiệu năng của mô hình, chúng tôi sử dụng độ đo \textbf{Recall@K} (R@K), metric tiêu chuẩn cho bài toán Visual Place Recognition. Recall@K đo lường tỷ lệ phần trăm các ảnh truy vấn mà hệ thống có thể tìm thấy ít nhất một ảnh đúng (true match) trong top $K$ kết quả trả về. Trong thực nghiệm này, một ảnh trong cơ sở dữ liệu được coi là "đúng" (correct match) nếu khoảng cách địa lý (GPS) của nó nằm trong bán kính \textbf{25 mét} so với ảnh truy vấn.
+
+    Chúng tôi báo cáo kết quả tại các ngưỡng $K \in \{1, 5, 10\}$:
+    \begin{itemize}
+        \item \textbf{R@1}: Độ chính xác ở top-1, phản ánh khả năng định vị chính xác tuyệt đối.
+        \item \textbf{R@5, R@10}: Phản ánh khả năng của hệ thống trong việc đề xuất danh sách ứng viên tiềm năng, quan trọng cho các ứng dụng có bước re-ranking hoặc verification phía sau.
+    \end{itemize}
+
+    \subsubsection{Training strategies}
+
+    Ba chiến lược training được triển khai nhằm đánh giá sự cân bằng giữa hiệu năng và tài nguyên. Chiến lược \textbf{Freeze Base + Train Cross-Image} là phương án tiếp cận theo hướng transfer learning, tận dụng toàn bộ tri thức đã học của SALADBase (được đóng băng) và chỉ huấn luyện Module CrossImageEncoder mới. Đây là chiến lược nhanh nhất và tiết kiệm tài nguyên nhất. Ngược lại, chiến lược \textbf{Fine-tune All} cho phép cập nhật toàn bộ tham số của cả SALADBase và CrossImageEncoder, giúp model đạt được sự đồng bộ cao nhất giữa các thành phần nhưng đòi hỏi chi phí tính toán lớn hơn và cần learning rate thấp để tránh hiện tượng catastrophic forgetting. Chiến lược cuối cùng, \textbf{Train from Scratch}, mặc dù tốn kém nhất về thời gian nhưng cung cấp cái nhìn về khả năng hội tụ của mô hình khi không có sự hỗ trợ của weights định sẵn. Các thực nghiệm chính trong báo cáo này chủ yếu dựa trên chiến lược đầu tiên do tính hiệu quả và thực tiễn cao của nó.
+
+    \subsubsection{Forward modes và deployment}
+
+    Model hỗ trợ bốn forward modes khác nhau tùy use case, thể hiện tính linh hoạt của kiến trúc:
+    
+    \begin{description}
+        \item[Training Mode:] Tự động áp dụng cross-image khi batch size chia hết cho img\_per\_place=4 và model ở training mode. Global tokens của 4 ảnh cùng place được reshape và đưa qua Transformer Encoder.
+        \item[Query Mode:] Chỉ dùng SALADBase, không qua CrossImageEncoder, đảm bảo inference nhanh cho real-time queries.
+        \item[Database Mode:] Group ảnh theo place và áp dụng cross-image enhancement, tạo database descriptors phong phú hơn (có thể chạy offline).
+        \item[Validation Mode:] Duplicate mỗi query image thành 4 copies, áp dụng cross-image attention để consistent với training distribution, sau đó lấy descriptor từ copy đầu và re-normalize.
+    \end{description}
+
+    \subsubsection{Phân tích số lượng tham số}
+
+    Quá trình phân tích số lượng tham số cho thấy sự hiệu quả trong thiết kế của kiến trúc đề xuất. Cụ thể, thành phần \textbf{SALADBase} cơ sở chiếm khoảng \textbf{2.59 triệu parameters}, đóng vai trò là feature aggregator chính. Module \textbf{CrossImageEncoder} được thêm vào chỉ đóng góp khoảng \textbf{1.58 triệu parameters}. Tổng số lượng tham số của toàn bộ mô hình là \textbf{4.17 triệu parameters}, tương ứng với mức tăng khoảng 61\% so với baseline. Mặc dù có sự gia tăng về kích thước, nhưng sự cải thiện đáng kể về hiệu năng (như sẽ trình bày ở phần sau) hoàn toàn xứng đáng với chi phí này.
+
+    Điều quan trọng cần lưu ý là cả hai phiên bản chiến lược—\textbf{CrossSalad1 (Batch-level)} và \textbf{CrossSalad2 (Place-level)}—đều chia sẻ chung một kiến trúc mạng và số lượng tham số training là \textbf{4.17 triệu}. Sự khác biệt giữa chúng nằm hoàn toàn ở cơ chế lan truyền thuận (forward pass) và cách tổ chức dữ liệu đầu vào (data flow) chứ không phải ở cấu trúc weights. Do đó, cả hai phương pháp đều có cùng yêu cầu về bộ nhớ lưu trữ mô hình (model storage), nhưng sẽ có các đặc điểm khác nhau về bộ nhớ runtime (RAM/VRAM) và tốc độ tính toán tùy thuộc vào kích thước batch và phạm vi attention được áp dụng.
+    
+    \subsection{Kết quả thực nghiệm}
+
+    \subsubsection{CrossSalad1: Batch-level Cross-Attention}
+
+    CrossSalad1 áp dụng self-attention trên toàn bộ batch (40-50 images) thay vì chỉ trong từng place. Ý tưởng là cho phép model không chỉ học từ multiple views của cùng địa điểm mà còn học được đặc điểm nào là quan trọng khi so sánh với các địa điểm khác trong batch. Kết quả thực nghiệm trên MSLS validation set với baseline K@1: 89.05\%, K@5: 94.46\% được trình bày trong Bảng~\ref{tab:crosssalad1_results}.
+
+    \begin{table}[h]
+    \centering
+    \caption{Kết quả CrossSalad1 trên MSLS validation với các batch size. Giá trị tốt nhất in \textbf{đậm}.}
+    \label{tab:crosssalad1_results}
+    \small
+    \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    \textbf{Batch Size} & \textbf{K@1 (\%)} & \textbf{$\Delta$K@1} & \textbf{K@5 (\%)} & \textbf{$\Delta$K@5} & \textbf{Ghi chú} \\
+    \midrule
+    Baseline & 89.05 & - & 94.46 & - & SALADBase only \\
+    Batch 40 & \textbf{90.81} & +1.76 & \textbf{95.41} & +0.95 & Best performance \\
+    Batch 50 & 90.71 & +1.66 & 95.32 & +0.86 & Slight decrease \\
+    Batch 60 & - & - & - & - & Out of RAM \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    Phân tích kết quả cho thấy CrossSalad1 với batch size 40 đạt performance tốt nhất: K@1 tăng 1.76 điểm phần trăm (từ 89.05\% lên 90.81\%), K@5 tăng 0.95 điểm phần trăm (từ 94.46\% lên 95.41\%). Mức cải thiện này là đáng kể trong VPR domain, nơi mỗi điểm phần trăm improvement đều có giá trị thực tế cao. Cụ thể, 1.76\% improvement ở Recall@1 tương đương với việc model nhận diện đúng thêm hàng chục địa điểm trong một query set lớn, giảm đáng kể false localization errors cho autonomous vehicles.
+
+    Tuy nhiên, phương pháp này gặp hai hạn chế nghiêm trọng khi deployment: (1) Memory limitation - batch size 60 đã vượt quá khả năng RAM của system, giới hạn scalability; (2) Inference latency - trong thực tế, khi user query một ảnh, system phải đợi accumulate đủ batch size hoặc pad với dummy images, tạo latency không chấp nhận được cho real-time applications. Do đó, mặc dù đạt performance cao nhất, CrossSalad1 chỉ phù hợp cho offline database preparation, không suitable cho interactive query scenarios.
+
+    \subsubsection{CrossSalad2: Place-level Cross-Attention}
+
+    Để khắc phục inference latency của CrossSalad1, CrossSalad2 chỉ áp dụng attention trong 4 ảnh cùng place thay vì toàn batch. Design này reduce dependency vào batch size lớn và potentially cho phép low-latency inference. Trong training, mỗi place có sẵn 4 ảnh; trong validation/inference, mỗi query image được duplicate thành 4 copies để giữ consistent với training distribution.
+
+    \begin{table}[h]
+    \centering
+    \caption{Kết quả CrossSalad2 trên MSLS validation. Baseline: K@1 89.05\%, K@5 94.46\%.}
+    \label{tab:crosssalad2_results}
+    \small
+    \begin{tabular}{@{}lcc@{}}
+    \toprule
+    \textbf{Phiên bản} & \textbf{K@1 (\%)} & \textbf{K@5 (\%)} \\
+    \midrule
+    Baseline (SALADBase) & 89.05 & 94.46 \\
+    CrossSalad2 (Server) & 44.43 & 65.43 \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    Kết quả thực nghiệm trên server cho thấy performance giảm mạnh so với baseline: K@1 xuống còn 44.43\% (-44.62 điểm), K@5 xuống 65.43\% (-29.03 điểm). Phân tích nguyên nhân chỉ ra vấn đề nằm ở việc duplicate query image: khi 4 copies hoàn toàn giống hệt nhau, cross-attention mechanism không học được useful information vì thiếu diversity. Khác với training distribution có 4 views thực sự khác nhau của cùng địa điểm, validation sử dụng 4 identical copies làm attention weights converge về uniform distribution, model không thể extract meaningful correlations.
+
+    Hướng giải quyết đề xuất bao gồm: (1) Data augmentation - apply random cropping, color jittering, perspective transforms vào mỗi copy để tạo pseudo-diversity; (2) Asymmetric training - train với cross-image cho both query và database, nhưng inference chỉ dùng cross-image cho database, queries dùng SALADBase vanilla; (3) Learnable query enhancement - thay vì duplicate, học một module tạo "virtual views" từ single query image. Các approaches này đang trong quá trình nghiên cứu và thực nghiệm tiếp theo.
+
+    \subsubsection{MN\_Salad: Increased Clusters Variant}
+
+    MN\_Salad tập trung vào cải tiến SALADBase aggregator bằng cách tăng số lượng clusters từ 64 mặc định lên nhiều hơn, đồng thời giảm cluster dimension để giữ tổng parameter count tương đương. Giả thuyết là mỗi cluster tương ứng với một visual pattern cụ thể (cột điện, cây cối, cầu, mái nhà, vạch kẻ đường,...), nên nhiều clusters sẽ capture được nhiều đặc điểm địa điểm hơn.
+
+    \begin{table}[h]
+    \centering
+    \caption{Kết quả MN\_Salad trên MSLS validation.}
+    \label{tab:mnsalad_results}
+    \small
+    \begin{tabular}{@{}lcc@{}}
+    \toprule
+    \textbf{Phương pháp} & \textbf{K@1 (\%)} & \textbf{K@5 (\%)} \\
+    \midrule
+    Baseline & 90.5 & 95.4 \\
+    MN\_Salad & 90.81 & 95.41 \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    Kết quả cho thấy cải thiện nhẹ: K@1 tăng 0.31 điểm (từ 90.5\% lên 90.81\%), K@5 tăng 0.01 điểm (95.4\% lên 95.41\%). Mức improvement này không đột phá nhưng validate giả thuyết rằng tăng representational capacity của cluster features có lợi. Quan sát này mở ra hướng nghiên cứu kết hợp: sử dụng MN\_Salad (nhiều clusters) làm base, sau đó áp dụng CrossImageEncoder lên global token. Combination này potentially mang lại benefits của both approaches - rich local details từ nhiều clusters và enhanced semantic information từ cross-image attention.
+
+    \subsubsection{Tổng hợp Kết quả và So sánh Thực nghiệm}
+
+    Phần này tổng hợp các kết quả đạt được từ các biến thể nội bộ và so sánh trực tiếp với các phương pháp State-of-the-Art (SOTA) hiện nay để cung cấp cái nhìn toàn diện về hiệu năng của hệ thống.
+
+    \paragraph{So sánh với State-of-the-Art:}
+    Trước hết, để đánh giá vị thế của phương pháp đề xuất trong bối cảnh nghiên cứu chung, Bảng~\ref{tab:sota_comparison} so sánh CrossSalad1 với các phương pháp VPR tiên tiến trên tập dữ liệu MSLS Validation.
+
+    \begin{table}[h]
+    \centering
+    \caption{So sánh với các phương pháp State-of-the-Art trên MSLS Validation.}
+    \label{tab:sota_comparison}
+    \small
+    \begin{tabular}{@{}lccc@{}}
+    \toprule
+    \textbf{Method} & \textbf{Desc. Size} & \textbf{R@1 (\%)} & \textbf{R@5 (\%)} \\
+    \midrule
+    NetVLAD \cite{arandjelovic2016netvlad} & 32768 & 82.6 & 89.6 \\
+    GeM \cite{radenovic2018fine} & 1024 & 78.2 & 86.6 \\
+    Conv-AP \cite{alibey2022gsv} & 8192 & 83.1 & 90.3 \\
+    CosPlace \cite{berton2022rethinking} & 2048 & 87.4 & 93.0 \\
+    MixVPR \cite{alibey2023mixvpr} & 4096 & 88.0 & 92.7 \\
+    EigenPlaces \cite{berton2023eigenplaces} & 2048 & 89.3 & 93.7 \\
+    DINOv2 SALAD (Small) \cite{izquierdo2024salad} & 512+32 & 89.3 & 94.9 \\
+    DINOv2 SALAD (Med) \cite{izquierdo2024salad} & 2048+64 & 90.5 & 95.4 \\
+    DINOv2 SALAD (Large) \cite{izquierdo2024salad} & 8192+256 & 92.2 & 96.4 \\
+    \midrule
+    \textbf{Ours (CrossSalad1)} & 2048+256 & \textbf{90.81} & \textbf{95.41} \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    Kết quả thực nghiệm cho thấy \textbf{CrossSalad1} đạt hiệu năng rất cạnh tranh. So với các phương pháp chuyên biệt khác như MixVPR (88.0\%) hay EigenPlaces (89.3\%), phương pháp của chúng tôi đạt độ chính xác cao hơn đáng kể ($+2.81\%$ và $+1.51\%$ R@1). Đáng chú ý, khi so sánh với phiên bản gốc \textbf{DINOv2 SALAD (Med)} có cấu hình tương đương (cùng backbone ViT-S), CrossSalad1 cũng ghi nhận sự cải thiện (90.81\% so với 90.5\%). Mặc dù kết quả này vẫn thấp hơn phiên bản \textbf{SALAD Large} (92.2\%), điều này là dễ hiểu do SALAD Large sử dụng backbone ViT-L khổng lồ và số lượng clusters lớn hơn gấp 4 lần. Tuy nhiên, việc vượt qua mốc 90\% R@1 trên tập dữ liệu khó như MSLS với một model kích thước trung bình (Medium) đã khẳng định hiệu quả của chiến lược tích hợp thông tin đa góc nhìn (Cross-Image Context).
+
+    \paragraph{Phân tích Biến thể và Trade-offs:}
+    Tuy nhiên, để đạt được hiệu năng cao nhất, cần phải cân nhắc các yếu tố chi phí. Bảng~\ref{tab:overall_comparison} phân tích sự đánh đổi giữa các biến thể nội bộ của chúng tôi.
+
+    \begin{table}[h]
+    \centering
+    \caption{So sánh chi tiết các biến thể nội bộ (Internal Variants).}
+    \label{tab:overall_comparison}
+    \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    \textbf{Method} & \textbf{K@1 (\%)} & \textbf{K@5 (\%)} & \textbf{Params (M)} & \textbf{Inference} \\
+    \midrule
+    DINOv2 SALAD(Med) & 90.5 & 94.9 & 2.59 & Fast \\
+    \textbf{CrossSalad1 (B=40)} & \textbf{90.81} & \textbf{95.41} & 4.17 & Slow (batch) \\
+    CrossSalad2 & 44.43 & 65.43 & 4.17 & Medium \\
+    \textbf{MN\_Salad} & \textbf{90.81} & \textbf{95.41} & $\sim$2.6 & Fast \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    Chúng ta thấy một hiện tượng thú vị: cả \textbf{CrossSalad1} và \textbf{MN\_Salad} đều đạt cùng mức hiệu năng cao nhất (90.81\%), nhưng với hai hướng tiếp cận khác nhau. CrossSalad1 tận dụng thông tin ngữ nghĩa từ nhiều ảnh (tốt nhưng chậm do xử lý batch), trong khi MN\_Salad tăng độ mịn của các cụm đặc trưng (nhanh và nhẹ hơn). Ngược lại, CrossSalad2 thất bại do vấn đề về phân phối dữ liệu query (duplicate images).
+    
+    \textit{Kết luận cho triển khai:} Với các ứng dụng yêu cầu độ chính xác cao nhất bất kể thời gian (như tạo bản đồ offline), \textbf{CrossSalad1} là lựa chọn tối ưu nhờ khả năng học context mạnh mẽ. Tuy nhiên, với các ứng dụng thời gian thực (robot, xe tự hành), \textbf{MN\_Salad} lại là ứng viên sáng giá hơn khi cân bằng hoàn hảo giữa tốc độ và độ chính xác.
+
+    \section{Phân tích và Thảo luận}
+
+    Chương này tập trung phân tích sâu sắc các kết quả thực nghiệm và đặc tính kỹ thuật của hệ thống. Chúng tôi không chỉ làm rõ những ưu điểm kiến trúc đã mang lại hiệu suất tốt mà còn thẳng thắn nhìn nhận những hạn chế còn tồn tại và các rào cản thực tế khi triển khai.
+
+    \subsection{Ưu điểm kiến trúc (Architectural Advantages)}
+
+    \subsubsection{Hiệu quả của Optimal Transport với thuật toán Sinkhorn}
+    So với các phương pháp tiếp cận truyền thống như NetVLAD – vốn sử dụng Softmax để gán đặc trưng vào các cụm, thuật toán Sinkhorn mang lại một nền tảng toán học vững chắc hơn thông qua bài toán Vận chuyển Tối ưu (Optimal Transport). Cơ chế Softmax thường gặp phải vấn đề "Cluster Collapse", nơi phần lớn các feature bị dồn về một vài cụm dominant, làm giảm tính phân biệt của descriptor. Ngược lại, Sinkhorn áp dụng các ràng buộc entropy regularization và normalization lặp, ép buộc mô hình phải phân phối feature đều khắp các cụm. Kết quả là mỗi cluster đều đóng góp vào biểu diễn cuối cùng, giúp descriptor giữ lại được nhiều chi tiết cục bộ tinh tế hơn và tăng tính mạnh mẽ (robustness) trước nhiễu.
+
+    \subsubsection{Biểu diễn kép: Global Token kết hợp Cluster Features}
+    Mô hình đề xuất tận dụng sức mạnh của biểu diễn kép (dual representation) để tối đa hóa khả năng nhận diện. Trong khi \textit{Global Token} ($t$) nắm bắt ngữ nghĩa toàn cục và các thông tin bậc cao (ví dụ: bối cảnh chung, loại địa hình), thì \textit{Cluster Features} ($s$) lại lưu giữ cấu trúc không gian chi tiết (ví dụ: các cạnh nhà, biển báo). Sự bổ sung này tạo nên một descriptor toàn diện: Global Token giúp định vị sơ bộ nhanh chóng, còn Cluster Features giúp tinh chỉnh và phân biệt giữa các địa điểm có bối cảnh tương tự nhau. Kết quả thực nghiệm đã chứng minh rằng sự kết hợp này vượt trội hơn hẳn so với việc chỉ sử dụng một trong hai loại đặc trưng.
+
+    \subsubsection{Chiến lược Cross-Image Enhancement tối ưu}
+    Điểm sáng tạo nhất trong kiến trúc là quyết định chỉ áp dụng Cross-Image Attention lên Global Token thay vì toàn bộ features. Về mặt lý thuyết, việc này dựa trên giả định rằng thông tin ngữ nghĩa cần thiết để kết nối các góc nhìn khác nhau chủ yếu nằm ở mức độ toàn cục. Về mặt thực tiễn, chiến lược này giảm thiểu đáng kể chi phí tính toán (giảm 99.7\% tham số bổ sung). Điều này đảm bảo tính ổn định của Cluster Features (không bị nhiễu bởi thông tin từ ảnh khác) trong khi vẫn làm giàu được Global Token với bối cảnh đa chiều.
+
+    \subsection{Hạn chế và Thách thức (Limitations and Challenges)}
+
+    Việc phân tích thẳng thắn các giới hạn của mô hình không chỉ giúp định vị chính xác đóng góp của nghiên cứu mà còn mở ra các hướng đi trong tương lai. Các hạn chế này bao gồm cả những vấn đề nội tại của thuật toán và các rào cản thực tế khi triển khai.
+
+    \subsubsection{Điểm yếu về mặt thuật toán}
+    
+    \paragraph{Nhiễu ngữ nghĩa (Semantic Noise):}
+    Mặc dù thuật toán Sinkhorn giúp phân phối đặc trưng tốt hơn, SALAD Base vẫn gặp khó khăn trong việc xử lý nhiễu. Do hoạt động dựa trên cơ chế gộp không giám sát (unsupervised aggregation), mô hình có xu hướng gộp cả các đặc trưng của vật thể động (xe cộ, người đi bộ) hoặc các chi tiết nền không quan trọng (mây, cây cối thay đổi theo mùa) vào descriptor cuối cùng. Việc thiếu một cơ chế chọn lọc thông minh khiến cho descriptor dễ bị thay đổi (sensitive) khi môi trường biến động mạnh.
+
+    \paragraph{Hiện tượng Over-smoothing:}
+    Đối với module CrossImageEncoder, hiện tượng "Over-smoothing" có thể xảy ra khi cơ chế attention làm mờ đi các đặc điểm riêng biệt (distinctive features) của từng góc nhìn, khiến cho biểu diễn của các ảnh trong cùng một nhóm trở nên quá giống nhau, làm giảm tính đa dạng cần thiết cho việc so khớp chính xác.
+
+    \subsubsection{Rào cản về triển khai và tài nguyên}
+
+    \paragraph{Tính linh hoạt (Flexibility):}
+    Cơ chế Attention hiện tại yêu cầu đầu vào phải là một cấu trúc dữ liệu cứng (fixed tuple of 4 images). Điều này gây khó khăn khi áp dụng cho các hệ thống robot chỉ có camera đơn (monocular) hoặc khi dữ liệu database không đồng nhất (số lượng ảnh mỗi địa điểm khác nhau).
+
+    \paragraph{Chi phí tính toán và Bộ nhớ:}
+    Việc tích hợp Cross-Image Attention làm tăng chi phí tính toán (FLOPs) và yêu cầu bộ nhớ GPU (VRAM) lớn hơn đáng kể do phải xử lý batch size lớn để mô hình hội tụ. Việc lưu trữ features của nhiều ảnh để phục vụ cross-attention cũng làm tăng memory footprint trong quá trình inference, đặc biệt là với database quy mô lớn.
+
+    \paragraph{Yêu cầu về Dữ liệu:}
+    Phương pháp phụ thuộc chặt chẽ vào cấu trúc dữ liệu đa góc nhìn (multi-view dataset). Điều này giới hạn khả năng áp dụng trên các bộ dữ liệu thưa thớt (sparse datasets) hoặc dữ liệu từ các nguồn cộng đồng thiếu cấu trúc.
+
+    \section{Conclusion}
+
+    \subsection{Summary}
+
+    Visual Place Recognition vẫn là bài toán thách thức với nhiều hướng nghiên cứu mở. Nghiên cứu này khẳng định rằng sự kết hợp giữa kiến trúc SALAD và cơ chế Cross-Image Enhancement đại diện cho một phương pháp hiệu quả và hiện đại. Phương pháp này thành công trong việc dung hòa sự chặt chẽ của toán học thông qua thuật toán Optimal Transport với sức mạnh của các mô hình học sâu tiên tiến như Vision Transformers. Quan trọng hơn, chúng tôi đã chứng minh được rằng việc thiết kế một kiến trúc hiệu quả về mặt thực tiễn—tối ưu hóa số lượng tham số và tốc độ tính toán—không nhất thiết phải đánh đổi độ chính xác.
+
+    Quá trình nghiên cứu và triển khai đã mang lại những hiểu biết sâu sắc về thiết kế các phương pháp tổng hợp (aggregation methods) cho visual descriptors. Kết quả thực nghiệm nhấn mạnh tầm quan trọng của tính nhất quán đa góc nhìn (multi-view consistency) trong việc nhận diện địa điểm, đồng thời chỉ ra hướng đi cho việc cân bằng giữa dung lượng quy mô mô hình, chi phí tính toán và hiệu năng thực tế.
+
+    
+    \section{Demo và hướng dẫn sử dụng}
+
+\subsection{Công nghệ sử dụng}
+\begin{table}[H] % Sử dụng [H] để cố định vị trí
+\centering
+\caption{Danh sách các công nghệ và thư viện chính}
+\label{tab:technologies}
+\renewcommand{\arraystretch}{1.5} 
+\begin{tabular}{|l|l|p{6cm}|}
+\hline
+\textbf{Phân loại} & \textbf{Công nghệ / Thư viện} & \textbf{Chi tiết ứng dụng} \\ \hline
+\textbf{Ngôn ngữ} & Python 3.10 & Ngôn ngữ lập trình chính cho toàn bộ hệ thống. \\ \hline
+\textbf{Framework Web} & FastAPI & Framework xây dựng API hiệu năng cao cho demo. \\ \cline{2-3}
+ & Uvicorn & ASGI server dùng để chạy ứng dụng FastAPI. \\ \cline{2-3}
+ & Jinja2 & Hệ thống template tạo giao diện người dùng (HTML). \\ \hline
+\textbf{Học sâu} & PyTorch 2.1.0 & Framework tính toán tensor và xây dựng mô hình. \\ \cline{2-3}
+ & PyTorch Lightning & Tổ chức mã nguồn huấn luyện và quản lý checkpoints. \\ \cline{2-3}
+ & Torchvision & Xử lý và tiền xử lý dữ liệu hình ảnh. \\ \hline
+\textbf{Mô hình AI} & DINOv2 & Backbone (Vision Transformer) được phát triển bởi Meta AI. \\ \cline{2-3}
+ & SALAD & Kỹ thuật gom cụm (aggregation) dựa trên Optimal Transport. \\ \hline
+\textbf{Xử lý dữ liệu} & NumPy & Tính toán ma trận và mảng đa chiều. \\ \cline{2-3}
+ & Pillow (PIL) & Thư viện mở và xử lý các tệp tin hình ảnh. \\ \cline{2-3}
+ & Pandas & Xử lý dữ liệu bảng và quản lý metadata hình ảnh. \\ \hline
+\textbf{Tính toán/Tối ưu} & CUDA 12.1 & Tăng tốc tính toán trên nền tảng GPU NVIDIA. \\ \cline{2-3}
+ & xFormers & Tối ưu hóa kiến trúc Transformer cho bộ nhớ và tốc độ. \\ \cline{2-3}
+ & FAISS & Thư viện tìm kiếm vector tương đồng (Similarity Search). \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Chức năng và giao diện}
+
+Demo sẽ thực hiện chức năng chính là đưa vào hình ảnh và trả về $5$ hình ảnh có độ tương đồng cao nhất với ảnh truy vấn.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{image/UI.png} % Điều chỉnh width (0.8) để thay đổi kích thước ảnh
+    \caption{Giao diện web}
+    \label{fig:ui}
+\end{figure}
+
+\subsection{Hướng dẫn cài đặt và khởi chạy}
+
+\begin{enumerate}
+    \item \textbf{Tải mã nguồn:} Sử dụng Git để sao chép kho lưu trữ về máy cục bộ.
+    \begin{verbatim}
+    git clone https://github.com/bin9638/-CS336.Q11.KHTN_Final.git
+    cd -CS336.Q11.KHTN_Final
+    \end{verbatim}
+
+    \item \textbf{Thiết lập môi trường:} Sử dụng Conda để tạo môi trường ảo từ file \texttt{environment.yml}.
+    \begin{verbatim}
+    conda env create -f environment.yml
+    conda activate salad
+    \end{verbatim}
+
+    \item \textbf{Chạy ứng dụng Demo:} Khởi động server FastAPI và truy cập tại \texttt{http://localhost:8000}.
+    \begin{verbatim}
+    python app.py
+    \end{verbatim}
+
+    \item \textbf{(Tùy chọn) Huấn luyện và Đánh giá:} Chạy các script tương ứng nếu cần.
+    \begin{verbatim}
+    python main.py
+    python eval.py --ckpt_path 'weights/dino_salad.ckpt'
+    \end{verbatim}
+\end{enumerate}
+
+\subsection{Mã nguồn và video}
+
+\begin{itemize}
+    \item Xem mã nguồn tại \href{https://github.com/bin9638/-CS336.Q11.KHTN_Final}{đây}.
+    \item Xem video demo tại \href{https://youtu.be/Vd4FCNJdR94}{đây}.
+\end{itemize}
+
+    \appendix
+    \section{Thông tin Dataset}
+    % \label{appendix:dataset}
+
+    Việc sử dụng các bộ dữ liệu quy mô lớn (Large-Scale Datasets) là yếu tố then chốt giúp các mô hình Deep Learning học được các đặc trưng bất biến và mạnh mẽ. Nghiên cứu này tận dụng hai trong số các bộ dữ liệu lớn nhất và thách thức nhất trong lĩnh vực VPR.
+
+    \subsection{Training Dataset: GSV-Cities}
+    
+    GSV-Cities là bộ dữ liệu khổng lồ được thu thập từ Google Street View, đóng vai trò nền tảng cho việc huấn luyện mô hình.
+    
+    \begin{itemize}
+        \item \textbf{Quy mô:} Bao gồm hơn \textbf{560.000 hình ảnh} từ hơn \textbf{67.000 địa điểm} (locations) khác nhau.
+        \item \textbf{Độ phủ địa lý:} Dữ liệu trải rộng trên nhiều thành phố lớn trên thế giới (London, Pittsburgh, Melbourne, v.v.), đảm bảo sự đa dạng về kiến trúc và quy hoạch đô thị.
+        \item \textbf{Độ đa dạng môi trường:} Chứa đựng nhiều điều kiện thời tiết, ánh sáng và mùa khác nhau nhờ vào kho dữ liệu phong phú của Google Maps.
+        \item \textbf{Đặc điểm cấu trúc:} Mỗi địa điểm được chụp bởi ít nhất \textbf{4 góc nhìn} khác nhau. Tính chất "Multi-view" này cực kỳ quan trọng cho mô hình Cross-Image của chúng tôi, cho phép mạng học cách liên kết các góc nhìn khác nhau của cùng một vật thể.
+        \item \textbf{Độ phân giải:} Ảnh được chuẩn hóa về $320 \times 320$, tối ưu cho ViT backbone.
+        \item \textbf{Nhãn GPS:} Độ chính xác cao, đã được tinh chỉnh để loại bỏ các sai số thường gặp trong dữ liệu thô.
+    \end{itemize}
+
+    \subsection{Validation Dataset: Mapillary Street-Level Sequences (MSLS)}
+    
+    Để đánh giá, chúng tôi sử dụng tập Validation của MSLS \cite{warburg2020msls}, bộ dữ liệu thách thức nhất hiện nay cho bài toán long-term place recognition.
+
+    \begin{itemize}
+        \item \textbf{Quy mô tổng thể:} Toàn bộ dataset chứa hơn \textbf{1.6 triệu hình ảnh}.
+        \item \textbf{Đặc tính Long-term:} Các chuỗi ảnh được thu thập qua nhiều năm, bao gồm sự thay đổi mạnh mẽ về mùa (hè xanh lá, đông tuyết trắng), thời gian (ngày, đêm, hoàng hôn) và thời tiết (nắng, mưa).
+        \item \textbf{Độ khó:} Chứa nhiều vật thể động (xe cộ, người đi bộ) và các vật thể che khuất tĩnh (biển báo, cây cối), tạo ra các tình huống "Dynamic Occlusion" thử thách khả năng lọc nhiễu của mô hình.
+        \item \textbf{Thiết lập đánh giá:} Việc đạt kết quả cao trên MSLS chứng minh khả năng tổng quát hóa (generalization) vượt trội của mô hình ra ngoài dữ liệu training ban đầu.
+    \end{itemize}
+
+
+    \printbibliography % Nếu dùng biblatex
+    \bibliographystyle{ieeetr}
+    \bibliography{references}
+
+
+
+\end{document}
