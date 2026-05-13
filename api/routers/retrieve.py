@@ -70,18 +70,16 @@ class RetrieveResponse(BaseModel):
 )
 async def retrieve(
     request: Request,
-    images: List[UploadFile] = File(...,  description="Query images (at least 1, up to N)"),
+    image: UploadFile  = File(...,  description="Query image"),
     top_k: int         = Form(default=5, ge=1, le=20, description="Number of results"),
     _: str             = Depends(require_api_key),
 ):
     # ── Read upload ──────────────────────────────────────────────────────────
-    image_bytes_list = []
-    for image in images:
-        b = await image.read()
-        image_bytes_list.append(b)
+    b = await image.read()
+    image_bytes_list = [b]
 
     logger.info(
-        f"Retrieve request | num_images={len(images)} top_k={top_k}"
+        f"Retrieve request | image={image.filename} top_k={top_k}"
     )
 
     try:
